@@ -5,6 +5,27 @@ import { readBundle } from '../../core/bundle.js'
 import { getSandboxPath } from '../../utils/paths.js'
 import { AoError } from '../../utils/errors.js'
 
+const dim = (s: string) => `\x1b[2m${s}\x1b[0m`
+const bold = (s: string) => `\x1b[1m${s}\x1b[0m`
+const green = (s: string) => `\x1b[32m${s}\x1b[0m`
+const red = (s: string) => `\x1b[31m${s}\x1b[0m`
+const cyan = (s: string) => `\x1b[36m${s}\x1b[0m`
+const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`
+
+function colorizeDiff(diff: string): string {
+  return diff
+    .split('\n')
+    .map((line) => {
+      if (line.startsWith('+++') || line.startsWith('---')) return bold(line)
+      if (line.startsWith('@@')) return cyan(line)
+      if (line.startsWith('+')) return green(line)
+      if (line.startsWith('-')) return red(line)
+      if (line.startsWith('diff ')) return bold(yellow(line))
+      return line
+    })
+    .join('\n')
+}
+
 export default defineCommand({
   meta: {
     name: 'review',
@@ -38,27 +59,28 @@ export default defineCommand({
 
     const { meta, squashedDiff } = result
 
-    console.log(`\nBundle: ${meta.id}`)
-    console.log(`Sandbox: ${meta.sandbox}`)
-    console.log(`Description: ${meta.description}`)
-    console.log(`Suggested message: ${meta.suggestedMessage}`)
-    console.log(`Created: ${meta.createdAt}`)
-    console.log(`Commits: ${meta.commits.length}`)
+    console.log()
+    console.log(`${bold('Bundle:')} ${meta.id}`)
+    console.log(`${bold('Sandbox:')} ${meta.sandbox}`)
+    console.log(`${bold('Description:')} ${meta.description}`)
+    console.log(`${bold('Message:')} ${meta.suggestedMessage}`)
+    console.log(`${bold('Created:')} ${meta.createdAt}`)
+    console.log(`${bold('Commits:')} ${meta.commits.length}`)
 
     if (meta.commits.length > 0) {
-      console.log('\nCommit history:')
+      console.log()
       for (const c of meta.commits) {
-        console.log(`  ${c.hash.slice(0, 8)} ${c.message}`)
+        console.log(`  ${dim(c.hash.slice(0, 8))} ${c.message}`)
       }
     }
 
     if (meta.dependencies?.length) {
-      console.log(`\nDependencies: ${meta.dependencies.join(', ')}`)
+      console.log(`\n${bold('Dependencies:')} ${meta.dependencies.join(', ')}`)
     }
 
     if (squashedDiff) {
-      console.log('\n--- squashed.diff ---')
-      console.log(squashedDiff)
+      console.log()
+      console.log(colorizeDiff(squashedDiff))
     }
   },
 })

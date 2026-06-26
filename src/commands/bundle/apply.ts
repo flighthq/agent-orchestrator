@@ -39,7 +39,7 @@ export default defineCommand({
     },
     target: {
       type: 'string',
-      description: 'Target repo path (defaults to source repo)',
+      description: 'Target repo path (defaults to current directory)',
     },
   },
   async run({ args }) {
@@ -57,7 +57,7 @@ export default defineCommand({
 
     const sandboxPath = getSandboxPath(workspacePath, args.sandbox)
     const bundlePath = join(sandboxPath, '.sandbox', 'bundles', args.bundle)
-    const targetRepoPath = resolve(args.target ?? state.sourceRepoPath)
+    const targetRepoPath = resolve(args.target ?? process.cwd())
 
     // --branch with no value comes through as empty string
     let branch: boolean | string | undefined

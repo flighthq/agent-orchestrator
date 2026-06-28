@@ -87,7 +87,11 @@ async function run({
       }
       logger.info(`Pack files: ${getPackDir(repoRoot, args.pack)}`)
       logger.info('Resolve the conflicts, then run:')
-      logger.info(`  git add -A && git commit -m ${JSON.stringify(meta.suggestedMessage)}`)
+      if (mode === 'commits') {
+        logger.info('  git add -A && git am --continue   (or: git am --abort to bail out)')
+      } else {
+        logger.info(`  git add -A && git commit -m ${JSON.stringify(meta.suggestedMessage)}`)
+      }
       process.exit(1)
     }
     throw err

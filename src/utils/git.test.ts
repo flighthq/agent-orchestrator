@@ -19,6 +19,7 @@ import {
   diffStaged,
   findRoot,
   formatPatch,
+  getConflicts,
   getCurrentRef,
   getRemoteUrl,
   hasCommitsSince,
@@ -240,6 +241,25 @@ describe('createBranch', () => {
     await makeCommit(dir, 'file.txt', 'content', 'initial')
     await createBranch(dir, 'feature')
     expect(await branchExists(dir, 'feature')).toBe(true)
+  })
+})
+
+describe('getConflicts', () => {
+  it('returns empty when the working tree has no conflicts', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    expect(await getConflicts(dir)).toEqual([])
+  })
+
+  it('lists files with unresolved merge conflicts', async () => {
+    await makeCommit(dir, 'file.txt', 'base\n', 'initial')
+    const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir })
+    const main = stdout.trim()
+    await createBranch(dir, 'other')
+    await makeCommit(dir, 'file.txt', 'other change\n', 'other')
+    await checkout(dir, main)
+    await makeCommit(dir, 'file.txt', 'main change\n', 'main')
+    await execa('git', ['merge', 'other'], { cwd: dir }).catch(() => {})
+    expect(await getConflicts(dir)).toContain('file.txt')
   })
 })
 

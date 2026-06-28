@@ -119,6 +119,15 @@ export async function isClean(cwd: string): Promise<boolean> {
   return stdout.trim() === ''
 }
 
+/** Paths with unresolved merge conflicts in the working tree (empty if none). */
+export async function getConflicts(cwd: string): Promise<string[]> {
+  const stdout = await git(['status', '--porcelain'], cwd)
+  return stdout
+    .split('\n')
+    .filter((l) => /^(UU|AA|DD|AU|UA|DU|UD) /.test(l))
+    .map((l) => l.slice(3).trim())
+}
+
 export async function createBranch(cwd: string, name: string): Promise<void> {
   await git(['checkout', '-b', name], cwd)
 }

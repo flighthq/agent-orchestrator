@@ -178,7 +178,21 @@ export async function applyPack(opts: {
           .filter((f) => f.endsWith('.patch'))
           .sort()
           .map((f) => join(commitsDir, f))
-        await git.am(targetRepoPath, sortedPatches)
+        try {
+          await git.am(targetRepoPath, sortedPatches)
+        } catch (amErr) {
+          // git am --3way stops at the first conflicting patch and leaves the am
+          // session in progress. Surface the conflicts so the user can resolve
+          // them and `git am --continue`, rather than aborting their work.
+          const conflicts = await git.getConflicts(targetRepoPath)
+          if (conflicts.length > 0) {
+            throw new ConflictError(
+              `Pack "${packName}" stopped with ${conflicts.length} conflict(s) — resolve then "git am --continue"`,
+              conflicts,
+            )
+          }
+          throw amErr
+        }
         break
       }
       case 'patch': {

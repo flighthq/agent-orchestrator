@@ -18,7 +18,7 @@ import {
   remoteWorkerRepoDir,
 } from '../utils/paths'
 import { renderWorkerClaudeMd } from './template'
-import { getSSHTransport, syncToRemote } from './transport'
+import { getSSHTransport } from './transport'
 import { ensureWorkspace, loadState, saveState } from './workspace'
 
 export async function addWorker(
@@ -180,7 +180,7 @@ export async function resetWorker(repoRoot: string, name: string): Promise<void>
     const rWorkerDir = remoteWorkerDir(state.id, name, worker.location.base)
     const rRepoDir = remoteWorkerRepoDir(state.id, name, worker.location.base)
 
-    await syncToRemote(repoRoot, rRoot, worker.location)
+    await transport.syncProjectTo(repoRoot, rRoot)
     await transport.exec(`rm -rf ${rRepoDir}`)
     await transport.ensureDir(`${rWorkerDir}/inbox/packs`)
     await transport.ensureDir(`${rWorkerDir}/inbox/status`)

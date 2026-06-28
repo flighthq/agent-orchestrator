@@ -52,10 +52,30 @@ class LocalTransport implements Transport {
 class SSHTransport implements Transport {
   private readonly sshFlags: string[]
   private readonly scpFlags: string[]
+  private readonly sshRsyncCmd: string
 
   constructor(private readonly loc: SSHLocation) {
-    this.sshFlags = loc.port ? ['-p', String(loc.port)] : []
-    this.scpFlags = loc.port ? ['-P', String(loc.port)] : []
+    // Derive a short socket path from the host spec. Used by ControlMaster to
+    // multiplex all SSH connections for this worker through a single TCP session
+    // — the user only authenticates once per 60-second window.
+    const safeHost = loc.host.replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 50)
+    const portSuffix = loc.port ? `_${loc.port}` : ''
+    const controlPath = `/tmp/qb_${safeHost}${portSuffix}`
+
+    const ctrlFlags = [
+      '-o',
+      'ControlMaster=auto',
+      '-o',
+      `ControlPath=${controlPath}`,
+      '-o',
+      'ControlPersist=60s',
+    ]
+    this.sshFlags = [...ctrlFlags, ...(loc.port ? ['-p', String(loc.port)] : [])]
+    this.scpFlags = [...ctrlFlags, ...(loc.port ? ['-P', String(loc.port)] : [])]
+    // Shell string passed to rsync -e. ControlPath has no special chars, so no quoting needed.
+    this.sshRsyncCmd = ['ssh', ...ctrlFlags, ...(loc.port ? ['-p', String(loc.port)] : [])].join(
+      ' ',
+    )
   }
 
   async readFile(path: string): Promise<string> {
@@ -105,18 +125,50 @@ class SSHTransport implements Transport {
 
   /** Copy a directory from remote to local using rsync. */
   async rsyncFrom(remotePath: string, localPath: string): Promise<void> {
-    const portArgs = this.loc.port ? ['-e', `ssh -p ${this.loc.port}`] : []
-    await execa('rsync', ['-a', ...portArgs, `${this.loc.host}:${remotePath}/`, `${localPath}/`], {
-      stdio: 'inherit',
-    })
+    await execa(
+      'rsync',
+      ['-a', '-e', this.sshRsyncCmd, `${this.loc.host}:${remotePath}/`, `${localPath}/`],
+      {
+        stdio: 'inherit',
+      },
+    )
   }
 
   /** Copy a local directory to a remote path using rsync. */
   async rsyncTo(localPath: string, remotePath: string): Promise<void> {
-    const portArgs = this.loc.port ? ['-e', `ssh -p ${this.loc.port}`] : []
-    await execa('rsync', ['-a', ...portArgs, `${localPath}/`, `${this.loc.host}:${remotePath}/`], {
-      stdio: 'inherit',
-    })
+    await execa(
+      'rsync',
+      ['-a', '-e', this.sshRsyncCmd, `${localPath}/`, `${this.loc.host}:${remotePath}/`],
+      {
+        stdio: 'inherit',
+      },
+    )
+  }
+
+  /**
+   * Rsync the local project root to the remote workspace, excluding runtime
+   * artifacts. The remote receives the full git object store so it can clone
+   * locally without any external network access.
+   */
+  async syncProjectTo(localRoot: string, remotePath: string): Promise<void> {
+    await execa('ssh', [...this.sshFlags, this.loc.host, `mkdir -p ${remotePath}`])
+    await execa(
+      'rsync',
+      [
+        '-av',
+        '--delete',
+        '--exclude=.quimby/',
+        '--exclude=node_modules/',
+        '--exclude=dist/',
+        '--exclude=.git/hooks/',
+        '--exclude=flight/',
+        '-e',
+        this.sshRsyncCmd,
+        `${localRoot}/`,
+        `${this.loc.host}:${remotePath}/`,
+      ],
+      { stdio: 'inherit' },
+    )
   }
 }
 
@@ -127,36 +179,4 @@ export function getTransport(location: WorkerLocation | undefined): Transport {
 
 export function getSSHTransport(location: SSHLocation): SSHTransport {
   return new SSHTransport(location)
-}
-
-/**
- * rsync the local project root to the remote workspace, excluding runtime
- * artifacts. The remote receives the full git object store so it can clone
- * locally without any external network access.
- */
-export async function syncToRemote(
-  localRoot: string,
-  remoteProjectRoot: string,
-  location: SSHLocation,
-): Promise<void> {
-  const sshFlags = location.port ? ['-p', String(location.port)] : []
-  await execa('ssh', [...sshFlags, location.host, `mkdir -p ${remoteProjectRoot}`])
-
-  const portArgs = location.port ? ['-e', `ssh -p ${location.port}`] : []
-  await execa(
-    'rsync',
-    [
-      '-av',
-      '--delete',
-      '--exclude=.quimby/',
-      '--exclude=node_modules/',
-      '--exclude=dist/',
-      '--exclude=.git/hooks/',
-      '--exclude=flight/',
-      ...portArgs,
-      `${localRoot}/`,
-      `${location.host}:${remoteProjectRoot}/`,
-    ],
-    { stdio: 'inherit' },
-  )
 }

@@ -2,7 +2,7 @@ import { defineCommand } from 'citty'
 import { execa } from 'execa'
 
 import { renderWorkerClaudeMd } from '../core/template'
-import { getSSHTransport, syncToRemote } from '../core/transport'
+import { getSSHTransport, sq } from '../core/transport'
 import { resolveWorkspace, saveState } from '../core/workspace'
 import { buildContext, getRuntime, runtimeTypes } from '../runtimes/index'
 import { isSSH } from '../types/location'
@@ -58,7 +58,7 @@ async function run({ args }: { args: { name: string; agent?: string; runtime?: s
     const rRepoDir = remoteWorkerRepoDir(state.id, args.name, loc.base)
 
     logger.start(`Syncing project to ${loc.host}...`)
-    await syncToRemote(repoRoot, rRoot, loc)
+    await transport.syncProjectTo(repoRoot, rRoot)
 
     // Lazy remote init: set up worker dirs and clone if this is the first run.
     const repoReady = await transport.fileExists(`${rRepoDir}/.git`)
@@ -81,13 +81,23 @@ async function run({ args }: { args: { name: string; agent?: string; runtime?: s
 
     const agentCmd = args.agent ?? worker.defaults?.agent ?? 'claude'
     const sessionName = tmuxSessionName(state.id, worker.id)
-    const sshFlags = loc.port ? ['-p', String(loc.port)] : []
 
     logger.success(`Attaching to tmux session "${sessionName}" on ${loc.host}`)
     // CWD is rWorkerDir (parent of repo/) so the agent sees assignment.md, inbox/, etc.
     // tmux -A: attach to existing session or create a new one.
-    const tmuxCmd = `tmux new-session -A -s ${sessionName} -c ${rWorkerDir} ${agentCmd}`
-    await execa('ssh', ['-t', ...sshFlags, loc.host, tmuxCmd], { stdio: 'inherit' })
+    // bash -l: login shell so PATH includes user-installed tools like claude.
+    await transport.runInteractive('tmux', [
+      'new-session',
+      '-A',
+      '-s',
+      sessionName,
+      '-c',
+      sq(rWorkerDir),
+      'bash',
+      '-l',
+      '-c',
+      sq(agentCmd),
+    ])
     return
   }
 

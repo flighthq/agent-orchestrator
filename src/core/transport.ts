@@ -40,7 +40,10 @@ class LocalTransport implements Transport {
   }
 
   async exec(cmd: string, opts?: { cwd?: string }): Promise<string> {
-    const { stdout } = await execa('sh', ['-c', cmd], { cwd: opts?.cwd })
+    const { stdout } = await execa('sh', ['-c', cmd], {
+      cwd: opts?.cwd,
+      stripFinalNewline: false,
+    })
     return stdout
   }
 
@@ -108,6 +111,7 @@ class SSHTransport implements Transport {
     const remoteCmd = opts?.cwd ? `cd ${opts.cwd} && ${cmd}` : cmd
     const { stdout } = await execa('ssh', [...this.sshFlags, this.loc.host, remoteCmd], {
       maxBuffer: 256 * 1024 * 1024,
+      stripFinalNewline: false,
     })
     return stdout
   }

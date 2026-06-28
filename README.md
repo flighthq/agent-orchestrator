@@ -128,11 +128,11 @@ Remote sandboxes are scaffolded via SSH, polled by `ao watch` at a configurable 
 
 All apply modes create a branch `ao/<sandbox>/<bundle>` before touching your repo.
 
-| Mode               | Command                                 | Description                                   |
-| ------------------ | --------------------------------------- | --------------------------------------------- |
-| Squashed (default) | `ao bundle apply backend 001`           | Single commit with suggested message          |
-| Commits            | `ao bundle apply backend 001 --commits` | Replays original commit sequence via `git am` |
-| Patch              | `ao bundle apply backend 001 --patch`   | Applies diff to working tree, no commit       |
+| Mode | Command | Description |
+| --- | --- | --- |
+| Squashed (default) | `ao bundle apply backend 001` | Single commit with suggested message |
+| Commits | `ao bundle apply backend 001 --commits` | Replays original commit sequence via `git am` |
+| Patch | `ao bundle apply backend 001 --patch` | Applies diff to working tree, no commit |
 
 ## Workspace Layout
 

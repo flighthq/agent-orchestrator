@@ -1,11 +1,13 @@
+import { appendFile, readFile, writeFile } from 'node:fs/promises'
+
 import { join } from 'pathe'
-import { readFile, writeFile, appendFile } from 'node:fs/promises'
-import { ensureDir, exists } from '../utils/fs.js'
-import { readYaml, writeYaml } from '../utils/yaml.js'
-import { getQuimbyDir, getStatePath } from '../utils/paths.js'
-import * as git from '../utils/git.js'
-import { QuimbyError } from '../utils/errors.js'
+
 import type { QuimbyState } from '../types/workspace.js'
+import { QuimbyError } from '../utils/errors.js'
+import { ensureDir, exists } from '../utils/fs.js'
+import * as git from '../utils/git.js'
+import { getQuimbyDir, getStatePath } from '../utils/paths.js'
+import { readYaml, writeYaml } from '../utils/yaml.js'
 
 export async function resolveWorkspace(): Promise<{
   state: QuimbyState
@@ -15,17 +17,13 @@ export async function resolveWorkspace(): Promise<{
   const repoRoot = await git.findRoot(cwd)
 
   if (!repoRoot) {
-    throw new QuimbyError(
-      'Not inside a git repository. Run from within a git repo.',
-    )
+    throw new QuimbyError('Not inside a git repository. Run from within a git repo.')
   }
 
   const statePath = getStatePath(repoRoot)
 
   if (!(await exists(statePath))) {
-    throw new QuimbyError(
-      'No quimby workspace found. Run `quimby add <name>` to create a worker.',
-    )
+    throw new QuimbyError('No quimby workspace found. Run `quimby add <name>` to create a worker.')
   }
 
   const state = await readYaml<QuimbyState>(statePath)
@@ -64,21 +62,14 @@ export async function loadState(repoRoot: string): Promise<QuimbyState> {
   return readYaml<QuimbyState>(getStatePath(repoRoot))
 }
 
-export async function saveState(
-  repoRoot: string,
-  state: QuimbyState,
-): Promise<void> {
+export async function saveState(repoRoot: string, state: QuimbyState): Promise<void> {
   await writeYaml(getStatePath(repoRoot), state)
 }
 
 async function getCurrentBranch(repoRoot: string): Promise<string> {
   try {
     const { execa } = await import('execa')
-    const { stdout } = await execa(
-      'git',
-      ['rev-parse', '--abbrev-ref', 'HEAD'],
-      { cwd: repoRoot },
-    )
+    const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot })
     return stdout.trim()
   } catch {
     return 'main'

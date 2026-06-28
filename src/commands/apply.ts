@@ -1,7 +1,8 @@
 import { defineCommand } from 'citty'
 import { resolve } from 'pathe'
+
+import { type ApplyMode, applyPack } from '../core/pack.js'
 import { resolveWorkspace } from '../core/workspace.js'
-import { applyPack, type ApplyMode } from '../core/pack.js'
 import { QuimbyError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 
@@ -44,11 +45,7 @@ export default defineCommand({
       throw new QuimbyError('Cannot use --commits and --patch together')
     }
 
-    const mode: ApplyMode = args.commits
-      ? 'commits'
-      : args.patch
-        ? 'patch'
-        : 'squashed'
+    const mode: ApplyMode = args.commits ? 'commits' : args.patch ? 'patch' : 'squashed'
 
     const targetRepoPath = resolve(args.target ?? process.cwd())
 

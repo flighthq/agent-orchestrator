@@ -1,11 +1,12 @@
 import { defineCommand } from 'citty'
 import { join } from 'pathe'
-import { resolveWorkspace } from '../core/workspace.js'
+
 import { sendPack } from '../core/pack.js'
-import { getWorkerDir } from '../utils/paths.js'
-import { writeText, readText } from '../utils/fs.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { QuimbyError } from '../utils/errors.js'
+import { readText, writeText } from '../utils/fs.js'
 import { logger } from '../utils/logger.js'
+import { getWorkerDir } from '../utils/paths.js'
 
 export default defineCommand({
   meta: {
@@ -53,15 +54,14 @@ export default defineCommand({
     }
 
     if (!taskContent && packNames.length > 0) {
-      taskContent = packNames.length === 1
-        ? `Please review the following pack: ${packNames[0]}`
-        : `Please review the following packs: ${packNames.join(', ')}`
+      taskContent =
+        packNames.length === 1
+          ? `Please review the following pack: ${packNames[0]}`
+          : `Please review the following packs: ${packNames.join(', ')}`
     }
 
     if (!taskContent) {
-      throw new QuimbyError(
-        'Provide a message with -m or attach a pack with -p',
-      )
+      throw new QuimbyError('Provide a message with -m or attach a pack with -p')
     }
 
     const workerDir = getWorkerDir(repoRoot, args.name)

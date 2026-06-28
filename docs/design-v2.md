@@ -37,6 +37,7 @@ Launches an agent in the background. The user interacts via `quimby assign`, rea
 ### 3. Server (`quimby serve`)
 
 The host-side process that enables everything requiring cross-worker visibility:
+
 - Polls worker `status.md` files for changes
 - Routes status updates to subscribing workers' `inbox/status/` directories
 - Exposes an HTTP API on localhost for status aggregation and subscription management
@@ -118,6 +119,7 @@ quimby assign <worker> --status <worker>    Embed another worker's status in ass
 ### Flag conventions
 
 All flags support `-x` short and `--xxx` long forms:
+
 - `-m` / `--message` (assign, pack)
 - `-n` / `--name` (pack)
 - `-p` / `--pack` (assign) or `--port` (serve)

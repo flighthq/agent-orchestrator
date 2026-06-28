@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty'
-import { resolveWorkspace } from '../core/workspace.js'
+
 import { createPack } from '../core/pack.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { QuimbyError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 
@@ -46,6 +47,8 @@ export default defineCommand({
       suggestedMessage: args.message,
     })
 
-    logger.success(`Pack "${meta.name}" created (${meta.commits.length} commit${meta.commits.length === 1 ? '' : 's'})`)
+    logger.success(
+      `Pack "${meta.name}" created (${meta.commits.length} commit${meta.commits.length === 1 ? '' : 's'})`,
+    )
   },
 })

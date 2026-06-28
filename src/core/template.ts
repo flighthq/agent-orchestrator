@@ -1,6 +1,4 @@
-export function renderWorkerClaudeMd(opts: {
-  workerName: string
-}): string {
+export function renderWorkerClaudeMd(opts: { workerName: string }): string {
   const { workerName } = opts
 
   const sections = [
@@ -16,7 +14,7 @@ export function renderWorkerClaudeMd(opts: {
     `- \`assignment.md\` — your current task (read this first)`,
     `- \`status.md\` — write your current status here`,
     `- \`inbox/\` — packs and status updates from other workers`,
-    `  - \`inbox/<pack-name>/\` — a pack (contains \`meta.yaml\` and \`squashed.diff\`)`,
+    `  - \`inbox/packs/<pack-name>/\` — a pack (contains \`meta.yaml\` and \`squashed.diff\`)`,
     `  - \`inbox/status/<worker-name>.md\` — latest status from another worker`,
     ``,
     `## How to Work`,
@@ -36,7 +34,7 @@ export function renderWorkerClaudeMd(opts: {
     `## Incoming Work`,
     ``,
     `Check \`inbox/\` for packs and status updates from other workers.`,
-    `- Packs in \`inbox/<name>/\` contain a \`meta.yaml\` and \`squashed.diff\``,
+    `- Packs in \`inbox/packs/<name>/\` contain a \`meta.yaml\` and \`squashed.diff\``,
     `- Status updates in \`inbox/status/<worker>.md\` show other workers' progress`,
     ``,
     `## Project Instructions`,

@@ -1,12 +1,14 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { stat, unlink } from 'node:fs/promises'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+
 import { join } from 'pathe'
-import { readText, writeText, exists, ensureDir } from '../utils/fs.js'
-import { getQuimbyDir, getWorkerDir } from '../utils/paths.js'
-import { loadState, saveState } from './workspace.js'
-import { listPacks } from './pack.js'
-import { logger } from '../utils/logger.js'
+
 import type { QuimbyState } from '../types/workspace.js'
+import { ensureDir, exists, readText, writeText } from '../utils/fs.js'
+import { logger } from '../utils/logger.js'
+import { getQuimbyDir, getWorkerDir, getWorkerInboxStatusDir } from '../utils/paths.js'
+import { listPacks } from './pack.js'
+import { loadState, saveState } from './workspace.js'
 
 export interface ServerOptions {
   repoRoot: string
@@ -187,7 +189,7 @@ async function pollWorkerStatus(
     if (!targets.includes(name)) continue
     if (!state.workers[subscriber]) continue
 
-    const inboxStatusDir = join(getWorkerDir(repoRoot, subscriber), 'inbox', 'status')
+    const inboxStatusDir = getWorkerInboxStatusDir(repoRoot, subscriber)
     await ensureDir(inboxStatusDir)
     await writeText(
       join(inboxStatusDir, `${name}.md`),
@@ -263,10 +265,7 @@ async function writeServerInfo(repoRoot: string, port: number): Promise<void> {
     port,
     startedAt: new Date().toISOString(),
   }
-  await writeText(
-    join(getQuimbyDir(repoRoot), 'server.json'),
-    JSON.stringify(info, null, 2),
-  )
+  await writeText(join(getQuimbyDir(repoRoot), 'server.json'), JSON.stringify(info, null, 2))
 }
 
 async function removeServerInfo(repoRoot: string): Promise<void> {

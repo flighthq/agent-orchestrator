@@ -7,6 +7,7 @@ Orchestrate multiple AI agents working on a single project in isolated sandboxes
 `ao` manages the lifecycle of agent sandboxes, the bundles of work they produce, and the routing of that work back into your real repository. Each agent operates in its own clone of your source repo with a frozen baseline (`ao/seed`). When an agent finishes, you review its bundle and apply it on a clean branch — no stash/rebase churn.
 
 **Core concepts:**
+
 - **Sandbox** — an isolated agent environment with its own source clone, runtime (Docker Sandbox, OpenShell, remote SSH), and role
 - **Bundle** — a packaged unit of work: squashed diff + original commit sequence + metadata
 - **Seed** — the `ao/seed` git tag in each sandbox marking the baseline all bundle diffs are computed against
@@ -127,11 +128,11 @@ Remote sandboxes are scaffolded via SSH, polled by `ao watch` at a configurable 
 
 All apply modes create a branch `ao/<sandbox>/<bundle>` before touching your repo.
 
-| Mode | Command | Description |
-|------|---------|-------------|
-| Squashed (default) | `ao bundle apply backend 001` | Single commit with suggested message |
-| Commits | `ao bundle apply backend 001 --commits` | Replays original commit sequence via `git am` |
-| Patch | `ao bundle apply backend 001 --patch` | Applies diff to working tree, no commit |
+| Mode               | Command                                 | Description                                   |
+| ------------------ | --------------------------------------- | --------------------------------------------- |
+| Squashed (default) | `ao bundle apply backend 001`           | Single commit with suggested message          |
+| Commits            | `ao bundle apply backend 001 --commits` | Replays original commit sequence via `git am` |
+| Patch              | `ao bundle apply backend 001 --patch`   | Applies diff to working tree, no commit       |
 
 ## Workspace Layout
 

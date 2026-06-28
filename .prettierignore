@@ -1,0 +1,6 @@
+dist/
+node_modules/
+.quimby/
+flight/
+*.patch
+*.diff

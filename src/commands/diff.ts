@@ -1,11 +1,12 @@
 import { defineCommand } from 'citty'
 import { join } from 'pathe'
-import { resolveWorkspace } from '../core/workspace.js'
+
 import { readPack } from '../core/pack.js'
-import { getWorkerRepoDir, getPackDir } from '../utils/paths.js'
+import { resolveWorkspace } from '../core/workspace.js'
+import { QuimbyError } from '../utils/errors.js'
 import { exists } from '../utils/fs.js'
 import * as git from '../utils/git.js'
-import { QuimbyError } from '../utils/errors.js'
+import { getPackDir, getWorkerRepoDir } from '../utils/paths.js'
 
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`

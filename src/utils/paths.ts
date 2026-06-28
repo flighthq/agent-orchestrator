@@ -27,3 +27,19 @@ export function getPacksDir(repoRoot: string): string {
 export function getPackDir(repoRoot: string, name: string): string {
   return join(repoRoot, '.quimby', 'packs', name)
 }
+
+export function getWorkerInboxDir(repoRoot: string, name: string): string {
+  return join(repoRoot, '.quimby', 'workers', name, 'inbox')
+}
+
+export function getWorkerInboxPackDir(
+  repoRoot: string,
+  workerName: string,
+  packName: string,
+): string {
+  return join(repoRoot, '.quimby', 'workers', workerName, 'inbox', 'packs', packName)
+}
+
+export function getWorkerInboxStatusDir(repoRoot: string, name: string): string {
+  return join(repoRoot, '.quimby', 'workers', name, 'inbox', 'status')
+}

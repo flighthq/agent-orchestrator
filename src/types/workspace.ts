@@ -11,4 +11,8 @@ export interface WorkerState {
   name: string
   seedCommit: string
   createdAt: string
+  defaults?: {
+    runtime?: string
+    agent?: string
+  }
 }

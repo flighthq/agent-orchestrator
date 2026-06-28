@@ -1,0 +1,30 @@
+import type { RuntimeAdapter, RuntimeContext, RuntimeType } from '../types/runtime.js'
+import { getWorkerDir, getWorkerRepoDir } from '../utils/paths.js'
+import { local } from './local.js'
+import { openshell } from './openshell.js'
+import { sbx } from './sbx.js'
+
+const adapters: Record<RuntimeType, RuntimeAdapter> = {
+  local,
+  sbx,
+  openshell,
+}
+
+export const runtimeTypes = Object.keys(adapters) as RuntimeType[]
+
+export function getRuntime(type: RuntimeType): RuntimeAdapter {
+  const adapter = adapters[type]
+  if (!adapter) {
+    throw new Error(`Unknown runtime: ${type}. Available: ${runtimeTypes.join(', ')}`)
+  }
+  return adapter
+}
+
+export function buildContext(repoRoot: string, workerName: string): RuntimeContext {
+  return {
+    workerName,
+    workerDir: getWorkerDir(repoRoot, workerName),
+    repoDir: getWorkerRepoDir(repoRoot, workerName),
+    repoRoot,
+  }
+}

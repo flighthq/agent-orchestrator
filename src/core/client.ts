@@ -1,5 +1,6 @@
 import { join } from 'pathe'
-import { readText, exists } from '../utils/fs.js'
+
+import { exists, readText } from '../utils/fs.js'
 import { getQuimbyDir } from '../utils/paths.js'
 import type { ServerInfo } from './server.js'
 
@@ -29,11 +30,7 @@ export async function serverGet(repoRoot: string, path: string): Promise<unknown
   return res.json()
 }
 
-export async function serverPost(
-  repoRoot: string,
-  path: string,
-  body: unknown,
-): Promise<boolean> {
+export async function serverPost(repoRoot: string, path: string, body: unknown): Promise<boolean> {
   const info = await getServerInfo(repoRoot)
   if (!info) return false
 

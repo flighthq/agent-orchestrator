@@ -1,21 +1,21 @@
 import { defineCommand } from 'citty'
 
-import { addWorker } from '../core/worker.js'
+import { setWorkerDefaults } from '../core/worker.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { runtimeTypes } from '../runtimes/index.js'
 import type { RuntimeType } from '../types/runtime.js'
 import { QuimbyError } from '../utils/errors.js'
-import * as git from '../utils/git.js'
 import { logger } from '../utils/logger.js'
 
 export default defineCommand({
   meta: {
-    name: 'add',
-    description: 'Create a new worker',
+    name: 'set',
+    description: 'Update worker defaults',
   },
   args: {
     name: {
       type: 'positional',
-      description: 'Name for the worker',
+      description: 'Worker name',
       required: true,
     },
     runtime: {
@@ -30,9 +30,14 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    const repoRoot = await git.findRoot(process.cwd())
-    if (!repoRoot) {
-      throw new QuimbyError('Not inside a git repository.')
+    if (!args.runtime && !args.agent) {
+      throw new QuimbyError('Specify at least one of --runtime or --agent')
+    }
+
+    const { state, repoRoot } = await resolveWorkspace()
+
+    if (!state.workers[args.name]) {
+      throw new QuimbyError(`Worker "${args.name}" not found`)
     }
 
     if (args.runtime && !runtimeTypes.includes(args.runtime as RuntimeType)) {
@@ -41,15 +46,11 @@ export default defineCommand({
       )
     }
 
-    const defaults =
-      args.runtime || args.agent ? { runtime: args.runtime, agent: args.agent } : undefined
+    const updates: { runtime?: string; agent?: string } = {}
+    if (args.runtime) updates.runtime = args.runtime
+    if (args.agent) updates.agent = args.agent
 
-    const workerState = await addWorker(repoRoot, args.name, defaults)
-    const hint = defaults
-      ? ` (${[defaults.runtime, defaults.agent].filter(Boolean).join(', ')})`
-      : ''
-    logger.success(
-      `Worker "${args.name}" created (seed: ${workerState.seedCommit.slice(0, 8)})${hint}`,
-    )
+    await setWorkerDefaults(repoRoot, args.name, updates)
+    logger.success(`Worker "${args.name}" updated`)
   },
 })

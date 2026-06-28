@@ -1,16 +1,19 @@
-import { join } from 'pathe'
 import { rm } from 'node:fs/promises'
-import { ensureDir, writeText, exists } from '../utils/fs.js'
-import * as git from '../utils/git.js'
-import { getWorkerDir, getWorkerRepoDir, getWorkersDir } from '../utils/paths.js'
-import { QuimbyError } from '../utils/errors.js'
-import { renderWorkerClaudeMd } from './template.js'
-import { ensureWorkspace, saveState, loadState } from './workspace.js'
+
+import { join } from 'pathe'
+
 import type { WorkerState } from '../types/workspace.js'
+import { QuimbyError } from '../utils/errors.js'
+import { ensureDir, writeText } from '../utils/fs.js'
+import * as git from '../utils/git.js'
+import { getWorkerDir, getWorkerRepoDir } from '../utils/paths.js'
+import { renderWorkerClaudeMd } from './template.js'
+import { ensureWorkspace, loadState, saveState } from './workspace.js'
 
 export async function addWorker(
   repoRoot: string,
   name: string,
+  defaults?: { runtime?: string; agent?: string },
 ): Promise<WorkerState> {
   validateWorkerName(name)
 
@@ -23,8 +26,8 @@ export async function addWorker(
   const workerDir = getWorkerDir(repoRoot, name)
   const repoDir = getWorkerRepoDir(repoRoot, name)
 
-  await ensureDir(workerDir)
-  await ensureDir(join(workerDir, 'inbox'))
+  await ensureDir(join(workerDir, 'inbox', 'packs'))
+  await ensureDir(join(workerDir, 'inbox', 'status'))
 
   await git.clone(repoRoot, repoDir, { ref: state.sourceRef })
   await git.tag(repoDir, 'quimby/seed')
@@ -41,6 +44,7 @@ export async function addWorker(
     name,
     seedCommit,
     createdAt: new Date().toISOString(),
+    ...(defaults ? { defaults } : {}),
   }
 
   state.workers[name] = workerState
@@ -49,10 +53,20 @@ export async function addWorker(
   return workerState
 }
 
-export async function removeWorker(
+export async function setWorkerDefaults(
   repoRoot: string,
   name: string,
+  updates: { runtime?: string; agent?: string },
 ): Promise<void> {
+  const state = await loadState(repoRoot)
+  if (!state.workers[name]) {
+    throw new QuimbyError(`Worker "${name}" not found`)
+  }
+  state.workers[name].defaults = { ...state.workers[name].defaults, ...updates }
+  await saveState(repoRoot, state)
+}
+
+export async function removeWorker(repoRoot: string, name: string): Promise<void> {
   const state = await loadState(repoRoot)
 
   if (!state.workers[name]) {
@@ -97,10 +111,7 @@ export async function renameWorker(
   await saveState(repoRoot, state)
 }
 
-export async function resetWorker(
-  repoRoot: string,
-  name: string,
-): Promise<void> {
+export async function resetWorker(repoRoot: string, name: string): Promise<void> {
   const state = await loadState(repoRoot)
 
   if (!state.workers[name]) {
@@ -136,11 +147,7 @@ function validateWorkerName(name: string): void {
 async function getCurrentBranchOrRef(repoRoot: string): Promise<string> {
   try {
     const { execa } = await import('execa')
-    const { stdout } = await execa(
-      'git',
-      ['rev-parse', '--abbrev-ref', 'HEAD'],
-      { cwd: repoRoot },
-    )
+    const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot })
     const branch = stdout.trim()
     return branch === 'HEAD' ? await git.getCurrentRef(repoRoot) : branch
   } catch {

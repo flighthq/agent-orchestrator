@@ -1,4 +1,5 @@
 import { defineCommand, runCommand, showUsage } from 'citty'
+
 import { logger } from './utils/logger.js'
 
 const main = defineCommand({
@@ -17,6 +18,7 @@ const main = defineCommand({
     pack: () => import('./commands/pack.js').then((m) => m.default),
     apply: () => import('./commands/apply.js').then((m) => m.default),
     send: () => import('./commands/send.js').then((m) => m.default),
+    set: () => import('./commands/set.js').then((m) => m.default),
     reset: () => import('./commands/reset.js').then((m) => m.default),
     rename: () => import('./commands/rename.js').then((m) => m.default),
     remove: () => import('./commands/remove.js').then((m) => m.default),
@@ -54,7 +56,7 @@ async function run() {
     process.exit(0)
   }
   if (rawArgs.length === 1 && rawArgs[0] === '--version') {
-    console.log('0.2.0')
+    console.log('0.2.0') // eslint-disable-line no-console
     process.exit(0)
   }
   try {

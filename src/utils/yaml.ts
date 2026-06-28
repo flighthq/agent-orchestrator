@@ -1,4 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises'
+
 import { parse, stringify } from 'yaml'
 
 export async function readYaml<T>(path: string): Promise<T> {

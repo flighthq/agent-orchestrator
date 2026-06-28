@@ -20,9 +20,23 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "npm run typecheck && npm run lint && npm run format:check",
     "test": "vitest",
     "test:run": "vitest run",
+    "precommit": "lint-staged",
+    "prepare": "husky",
     "prepublishOnly": "npm run build"
+  },
+  "lint-staged": {
+    "**/*.ts": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "**/*.{json,md}": "prettier --write"
   },
   "dependencies": {
     "citty": "^0.1.6",
@@ -32,7 +46,19 @@
     "yaml": "^2.7.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
     "@types/node": "^22.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"

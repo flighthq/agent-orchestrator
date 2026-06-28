@@ -1,9 +1,10 @@
 import { defineCommand } from 'citty'
 import { join } from 'pathe'
+
 import { resolveWorkspace } from '../core/workspace.js'
-import { getWorkerDir } from '../utils/paths.js'
-import { readText, exists } from '../utils/fs.js'
+import { exists, readText } from '../utils/fs.js'
 import { logger } from '../utils/logger.js'
+import { getWorkerDir } from '../utils/paths.js'
 
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`
 
@@ -22,9 +23,7 @@ export default defineCommand({
   async run({ args }) {
     const { state, repoRoot } = await resolveWorkspace()
 
-    const names = args.name
-      ? [args.name]
-      : Object.keys(state.workers)
+    const names = args.name ? [args.name] : Object.keys(state.workers)
 
     if (names.length === 0) {
       logger.info('No workers.')

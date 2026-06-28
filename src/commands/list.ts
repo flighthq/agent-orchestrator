@@ -1,7 +1,8 @@
 import { defineCommand } from 'citty'
-import { resolveWorkspace } from '../core/workspace.js'
-import { listPacks } from '../core/pack.js'
+
 import { getServerInfo } from '../core/client.js'
+import { listPacks } from '../core/pack.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { logger } from '../utils/logger.js'
 
 const dim = (s: string) => `\x1b[2m${s}\x1b[0m`
@@ -29,7 +30,11 @@ export default defineCommand({
       console.log(bold('Workers'))
       for (const name of workerNames) {
         const worker = state.workers[name]
-        console.log(`  ${name}  ${dim(worker.seedCommit.slice(0, 8))}`)
+        const defaults = worker.defaults
+        const config = defaults
+          ? dim(`${defaults.runtime ?? 'local'} / ${defaults.agent ?? 'claude'}`)
+          : dim('no defaults — run `quimby set`')
+        console.log(`  ${name}  ${dim(worker.seedCommit.slice(0, 8))}  ${config}`)
       }
     }
 
@@ -37,12 +42,9 @@ export default defineCommand({
       if (workerNames.length > 0) console.log()
       console.log(bold('Packs'))
       for (const pack of packs) {
-        const desc = pack.description.length > 60
-          ? pack.description.slice(0, 57) + '...'
-          : pack.description
-        console.log(
-          `  ${pack.name}  ${dim(`from: ${pack.worker}`)}  ${desc}`,
-        )
+        const desc =
+          pack.description.length > 60 ? pack.description.slice(0, 57) + '...' : pack.description
+        console.log(`  ${pack.name}  ${dim(`from: ${pack.worker}`)}  ${desc}`)
       }
     }
 

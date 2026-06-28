@@ -1,7 +1,8 @@
 import { defineCommand } from 'citty'
-import { resolveWorkspace } from '../core/workspace.js'
-import { startServer } from '../core/server.js'
+
 import { getServerInfo } from '../core/client.js'
+import { startServer } from '../core/server.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { QuimbyError } from '../utils/errors.js'
 
 export default defineCommand({
@@ -25,9 +26,7 @@ export default defineCommand({
 
     const existing = await getServerInfo(repoRoot)
     if (existing) {
-      throw new QuimbyError(
-        `Server already running (PID: ${existing.pid}, port: ${existing.port})`,
-      )
+      throw new QuimbyError(`Server already running (PID: ${existing.pid}, port: ${existing.port})`)
     }
 
     const port = args.port ? parseInt(args.port, 10) : undefined

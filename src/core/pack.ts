@@ -1,12 +1,14 @@
-import { join } from 'pathe'
 import { readdir } from 'node:fs/promises'
+
+import { join } from 'pathe'
+
+import type { CommitMeta, PackMeta } from '../types/pack.js'
+import { PackError, QuimbyError } from '../utils/errors.js'
 import { ensureDir, exists, writeText } from '../utils/fs.js'
-import { readYaml, writeYaml } from '../utils/yaml.js'
-import * as git from '../utils/git.js'
-import { getPacksDir, getPackDir, getWorkerDir, getWorkerRepoDir } from '../utils/paths.js'
-import { QuimbyError, PackError } from '../utils/errors.js'
 import { cp } from '../utils/fs.js'
-import type { PackMeta, CommitMeta } from '../types/pack.js'
+import * as git from '../utils/git.js'
+import { getPackDir, getPacksDir, getWorkerDir, getWorkerRepoDir } from '../utils/paths.js'
+import { readYaml, writeYaml } from '../utils/yaml.js'
 
 export async function createPack(opts: {
   repoRoot: string
@@ -25,11 +27,10 @@ export async function createPack(opts: {
     throw new PackError('No commits since quimby/seed — nothing to pack')
   }
 
-  const packName = opts.packName ?? await nextPackName(repoRoot, workerName)
+  const packName = opts.packName ?? (await nextPackName(repoRoot, workerName))
   const description = opts.description ?? subjects.join('; ')
   const suggestedMessage =
-    opts.suggestedMessage ??
-    (subjects.length === 1 ? subjects[0] : subjects[subjects.length - 1])
+    opts.suggestedMessage ?? (subjects.length === 1 ? subjects[0] : subjects[subjects.length - 1])
 
   const packDir = getPackDir(repoRoot, packName)
 
@@ -127,19 +128,14 @@ export async function applyPack(opts: {
   const { meta } = await readPack(repoRoot, packName)
 
   if (!(await git.isClean(targetRepoPath))) {
-    throw new QuimbyError(
-      'Target repo has uncommitted changes. Commit or stash first.',
-    )
+    throw new QuimbyError('Target repo has uncommitted changes. Commit or stash first.')
   }
 
   const previousRef = await git.getCurrentRef(targetRepoPath)
   let branchName: string | undefined
 
   if (branch !== undefined && branch !== false) {
-    branchName =
-      typeof branch === 'string'
-        ? branch
-        : `quimby/${meta.name}`
+    branchName = typeof branch === 'string' ? branch : `quimby/${meta.name}`
     if (await git.branchExists(targetRepoPath, branchName)) {
       await git.deleteBranch(targetRepoPath, branchName)
     }
@@ -173,10 +169,14 @@ export async function applyPack(opts: {
       }
     }
   } catch (err) {
-    try { await git.amAbort(targetRepoPath) } catch {}
+    try {
+      await git.amAbort(targetRepoPath)
+    } catch {}
     if (branchName) {
       await git.checkout(targetRepoPath, previousRef)
-      try { await git.deleteBranch(targetRepoPath, branchName) } catch {}
+      try {
+        await git.deleteBranch(targetRepoPath, branchName)
+      } catch {}
     }
     throw new QuimbyError(
       `Failed to apply pack "${packName}" in ${mode} mode: ${err instanceof Error ? err.message : err}`,
@@ -201,15 +201,12 @@ export async function sendPack(opts: {
     throw new QuimbyError(`Worker "${workerName}" not found`)
   }
 
-  const inboxDir = join(workerDir, 'inbox', packName)
+  const inboxDir = join(workerDir, 'inbox', 'packs', packName)
   await ensureDir(inboxDir)
   await cp(packDir, inboxDir, { recursive: true })
 }
 
-async function nextPackName(
-  repoRoot: string,
-  workerName: string,
-): Promise<string> {
+async function nextPackName(repoRoot: string, workerName: string): Promise<string> {
   const packs = await listPacks(repoRoot)
   const prefix = `${workerName}-`
   let max = 0

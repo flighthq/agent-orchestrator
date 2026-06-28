@@ -18,21 +18,25 @@ The author's multi-agent workflow evolved through these stages:
 ## Pain Points Driving the Design
 
 ### 1. Token Exhaustion
+
 Reusing agent sessions left contexts open, burning through tokens quickly. This led to interest in using cheaper models (Sonnet, Ollama+qwen) for some workers, and ensuring sessions are ephemeral rather than long-lived.
 
 **Quimby's answer**: Session-less model. Assignments go in, packs come out. No persistent context.
 
 ### 2. Model Flexibility
+
 Different tasks warrant different models and different compute. Opus for hard architecture, Sonnet for routine work, Ollama on a GPU box for cheap exploration.
 
 **Quimby's answer**: Workers are runtime-agnostic. The protocol (assignment.md, status.md, packs) is the same regardless of what agent or model runs inside the sandbox.
 
 ### 3. Manual Orchestration / Messenger Problem
+
 The user becomes a messenger relaying problems between agents. Builder hits an issue → user reads status → user manually tells reviewer → reviewer responds → user relays back.
 
 **Quimby's answer**: The server (`quimby serve`) polls worker status and routes updates via subscriptions. `quimby assign --pack` carries code artifacts between workers. The user orchestrates at a higher level instead of manually shuttling information.
 
 ### 4. Integration Bottleneck (Most Acute)
+
 Gets a green repo in one lane, dispatches work in others, something goes wrong, does `git stash → git rebase → git stash pop → merge conflicts`. Work outpaces ability to integrate. The more agents producing work, the worse this gets.
 
 **Quimby's answer**: Pack model with frozen baselines (`quimby/seed`). No stash/rebase mid-flight. Apply packs one at a time on clean branches. `quimby reset` to advance baselines after integration. The membrane ensures the user controls what enters the real repo.

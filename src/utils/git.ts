@@ -1,11 +1,8 @@
 import { execa } from 'execa'
+
 import { GitError } from './errors.js'
 
-async function git(
-  args: string[],
-  cwd: string,
-  opts?: { raw?: boolean },
-): Promise<string> {
+async function git(args: string[], cwd: string, opts?: { raw?: boolean }): Promise<string> {
   try {
     const { stdout } = await execa('git', args, {
       cwd,
@@ -14,10 +11,7 @@ async function git(
     return stdout
   } catch (err: unknown) {
     const e = err as { stderr?: string; message?: string }
-    throw new GitError(
-      `git ${args[0]} failed: ${e.stderr ?? e.message}`,
-      e.stderr,
-    )
+    throw new GitError(`git ${args[0]} failed: ${e.stderr ?? e.message}`, e.stderr)
   }
 }
 
@@ -85,11 +79,7 @@ export async function amAbort(cwd: string): Promise<void> {
   await git(['am', '--abort'], cwd)
 }
 
-export async function log(
-  cwd: string,
-  range: string,
-  format?: string,
-): Promise<string> {
+export async function log(cwd: string, range: string, format?: string): Promise<string> {
   return git(['log', range, `--format=${format ?? '%H|%s|%an|%aI'}`], cwd)
 }
 
@@ -143,11 +133,7 @@ export async function findRoot(cwd: string): Promise<string | undefined> {
   }
 }
 
-export async function fetch(
-  cwd: string,
-  remote?: string,
-  opts?: { ref?: string },
-): Promise<void> {
+export async function fetch(cwd: string, remote?: string, opts?: { ref?: string }): Promise<void> {
   const args = ['fetch']
   if (remote) args.push(remote)
   if (opts?.ref) args.push(opts.ref)
@@ -177,29 +163,16 @@ export async function resetHard(cwd: string, ref: string): Promise<void> {
   await git(['reset', '--hard', ref], cwd)
 }
 
-export async function hasCommitsSince(
-  cwd: string,
-  baseRef: string,
-): Promise<boolean> {
-  const stdout = await git(
-    ['rev-list', '--count', `${baseRef}..HEAD`],
-    cwd,
-  )
+export async function hasCommitsSince(cwd: string, baseRef: string): Promise<boolean> {
+  const stdout = await git(['rev-list', '--count', `${baseRef}..HEAD`], cwd)
   return parseInt(stdout.trim(), 10) > 0
 }
 
-export async function addRemote(
-  cwd: string,
-  name: string,
-  url: string,
-): Promise<void> {
+export async function addRemote(cwd: string, name: string, url: string): Promise<void> {
   await git(['remote', 'add', name, url], cwd)
 }
 
-export async function hasRemote(
-  cwd: string,
-  name: string,
-): Promise<boolean> {
+export async function hasRemote(cwd: string, name: string): Promise<boolean> {
   try {
     await git(['remote', 'get-url', name], cwd)
     return true

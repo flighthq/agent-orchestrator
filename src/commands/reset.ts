@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty'
-import { resolveWorkspace } from '../core/workspace.js'
+
 import { resetWorker } from '../core/worker.js'
+import { resolveWorkspace } from '../core/workspace.js'
 import { QuimbyError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 

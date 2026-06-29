@@ -20,24 +20,32 @@ export function getWorkerRepoDir(repoRoot: string, name: string): string {
   return join(repoRoot, '.quimby', 'workers', name, 'repo')
 }
 
-export function getPacksDir(repoRoot: string): string {
-  return join(repoRoot, '.quimby', 'packs')
+// The host loading dock: a parcel is assembled here while being applied or carried,
+// then discarded. Transient staging, never an archive.
+export function getStagingDir(repoRoot: string): string {
+  return join(repoRoot, '.quimby', 'staging')
 }
 
-export function getPackDir(repoRoot: string, name: string): string {
-  return join(repoRoot, '.quimby', 'packs', name)
+export function getStagingHandoffDir(repoRoot: string, name: string): string {
+  return join(repoRoot, '.quimby', 'staging', name)
 }
 
 export function getWorkerInboxDir(repoRoot: string, name: string): string {
   return join(repoRoot, '.quimby', 'workers', name, 'inbox')
 }
 
-export function getWorkerInboxPackDir(
+// A delivered parcel sits directly in the inbox, named by sender + contents.
+export function getWorkerInboxParcelDir(
   repoRoot: string,
   workerName: string,
-  packName: string,
+  parcelName: string,
 ): string {
-  return join(repoRoot, '.quimby', 'workers', workerName, 'inbox', 'packs', packName)
+  return join(repoRoot, '.quimby', 'workers', workerName, 'inbox', parcelName)
+}
+
+// Where a worker moves parcels it has processed.
+export function getWorkerInboxDoneDir(repoRoot: string, name: string): string {
+  return join(repoRoot, '.quimby', 'workers', name, 'inbox', '.done')
 }
 
 export function getWorkerInboxStatusDir(repoRoot: string, name: string): string {
@@ -48,8 +56,26 @@ export function getWorkerOutboxDir(repoRoot: string, name: string): string {
   return join(repoRoot, '.quimby', 'workers', name, 'outbox')
 }
 
-export function getWorkerOutboxFile(repoRoot: string, workerName: string, target: string): string {
-  return join(repoRoot, '.quimby', 'workers', workerName, 'outbox', `${target}.md`)
+// A staged parcel awaiting pickup, addressed by recipient.
+export function getWorkerOutboxDraftDir(
+  repoRoot: string,
+  workerName: string,
+  recipient: string,
+): string {
+  return join(repoRoot, '.quimby', 'workers', workerName, 'outbox', recipient)
+}
+
+// The delivery ledger: parcels already carried, moved aside on success.
+export function getWorkerOutboxSentDir(repoRoot: string, name: string): string {
+  return join(repoRoot, '.quimby', 'workers', name, 'outbox', '.sent')
+}
+
+export function getWorkerOutboxSentDraftDir(
+  repoRoot: string,
+  workerName: string,
+  recipient: string,
+): string {
+  return join(repoRoot, '.quimby', 'workers', workerName, 'outbox', '.sent', recipient)
 }
 
 // ── Remote paths (SSH workers) ────────────────────────────────────────────────
@@ -69,14 +95,6 @@ export function remoteWorkerDir(projectId: string, name: string, base?: string):
 
 export function remoteWorkerRepoDir(projectId: string, name: string, base?: string): string {
   return `${remoteWorkerDir(projectId, name, base)}/repo`
-}
-
-export function remotePacksDir(projectId: string, base?: string): string {
-  return `${remoteQuimbyDir(projectId, base)}/packs`
-}
-
-export function remotePackDir(projectId: string, packName: string, base?: string): string {
-  return `${remotePacksDir(projectId, base)}/${packName}`
 }
 
 // ── Stable identifiers ────────────────────────────────────────────────────────

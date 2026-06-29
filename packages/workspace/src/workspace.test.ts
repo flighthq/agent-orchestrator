@@ -33,32 +33,6 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
-describe('resolveWorkspace', () => {
-  it('resolves the repo root and quimby dir from a git repo', async () => {
-    await ensureWorkspace(dir)
-    process.chdir(dir)
-    const { state, repoRoot } = await resolveWorkspace()
-    expect(repoRoot).toBe(dir)
-    expect(state.workers).toBeDefined()
-  })
-
-  it('throws when called outside a git repo', async () => {
-    const notARepo = join(tmpdir(), `not-repo-${crypto.randomUUID()}`)
-    await mkdir(notARepo, { recursive: true })
-    process.chdir(notARepo)
-    try {
-      await expect(resolveWorkspace()).rejects.toThrow('Not inside a git repository')
-    } finally {
-      await rm(notARepo, { recursive: true, force: true })
-    }
-  })
-
-  it('throws when no state.yaml exists', async () => {
-    process.chdir(dir)
-    await expect(resolveWorkspace()).rejects.toThrow('No quimby workspace found')
-  })
-})
-
 describe('ensureWorkspace', () => {
   it('creates state.yaml and .gitignore on first call', async () => {
     await ensureWorkspace(dir)
@@ -125,6 +99,32 @@ describe('loadState', () => {
     expect(state.id).toBeDefined()
     expect(state.workers).toBeDefined()
     expect(state.sourceRepo).toBeDefined()
+  })
+})
+
+describe('resolveWorkspace', () => {
+  it('resolves the repo root and quimby dir from a git repo', async () => {
+    await ensureWorkspace(dir)
+    process.chdir(dir)
+    const { state, repoRoot } = await resolveWorkspace()
+    expect(repoRoot).toBe(dir)
+    expect(state.workers).toBeDefined()
+  })
+
+  it('throws when called outside a git repo', async () => {
+    const notARepo = join(tmpdir(), `not-repo-${crypto.randomUUID()}`)
+    await mkdir(notARepo, { recursive: true })
+    process.chdir(notARepo)
+    try {
+      await expect(resolveWorkspace()).rejects.toThrow('Not inside a git repository')
+    } finally {
+      await rm(notARepo, { recursive: true, force: true })
+    }
+  })
+
+  it('throws when no state.yaml exists', async () => {
+    process.chdir(dir)
+    await expect(resolveWorkspace()).rejects.toThrow('No quimby workspace found')
   })
 })
 

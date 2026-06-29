@@ -19,7 +19,7 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@quimbyhq/pack": "*",
+    "@quimbyhq/handoff": "*",
     "@quimbyhq/paths": "*",
     "@quimbyhq/transport": "*",
     "@quimbyhq/types": "*",

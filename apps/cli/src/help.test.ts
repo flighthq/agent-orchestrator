@@ -13,7 +13,7 @@ describe('renderRootHelp', () => {
   it('renders curated group titles', async () => {
     const help = await renderRootHelp('desc', '9.9.9', subCommands)
     expect(help).toContain('Workers')
-    expect(help).toContain('Packs & assignments')
+    expect(help).toContain('Work & assignments')
     expect(help).toContain('Server')
   })
 

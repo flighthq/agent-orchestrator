@@ -18,6 +18,7 @@ import {
   setWorkerDefaults,
   setWorkerLocation,
   setWorkerSyncRef,
+  setWorkerTmux,
 } from './worker'
 
 vi.mock('@quimbyhq/git', async (importOriginal) => {
@@ -105,51 +106,6 @@ describe('advanceWorker', () => {
   })
 })
 
-describe('setWorkerSyncRef', () => {
-  it('retargets the ref the worker syncs against', async () => {
-    await addWorker(dir, 'alice')
-    await setWorkerSyncRef(dir, 'alice', 'release')
-    const state = await loadState(dir)
-    expect(state.workers.alice.syncRef).toBe('release')
-  })
-
-  it('throws QuimbyError when the worker does not exist', async () => {
-    await expect(setWorkerSyncRef(dir, 'ghost', 'main')).rejects.toThrow('not found')
-  })
-})
-
-describe('setWorkerCheck', () => {
-  it('sets and clears the worker check command', async () => {
-    await addWorker(dir, 'alice')
-    await setWorkerCheck(dir, 'alice', 'npm run ci')
-    let state = await loadState(dir)
-    expect(state.workers.alice.check).toBe('npm run ci')
-
-    await setWorkerCheck(dir, 'alice', '')
-    state = await loadState(dir)
-    expect(state.workers.alice.check).toBeUndefined()
-  })
-})
-
-describe('setWorkerDefaults', () => {
-  it('updates runtime and agent on the worker state', async () => {
-    await addWorker(dir, 'alice')
-    await setWorkerDefaults(dir, 'alice', { runtime: 'sbx', agent: 'codex' })
-    const state = await loadState(dir)
-    expect(state.workers.alice.defaults?.runtime).toBe('sbx')
-    expect(state.workers.alice.defaults?.agent).toBe('codex')
-  })
-})
-
-describe('setWorkerLocation', () => {
-  it('updates the location on the worker state', async () => {
-    await addWorker(dir, 'alice')
-    await setWorkerLocation(dir, 'alice', { type: 'local' })
-    const state = await loadState(dir)
-    expect(state.workers.alice.location).toEqual({ type: 'local' })
-  })
-})
-
 describe('removeWorker', () => {
   it('removes the worker from state', async () => {
     await addWorker(dir, 'alice')
@@ -213,5 +169,63 @@ describe('resetWorker', () => {
 
   it('throws QuimbyError if worker does not exist', async () => {
     await expect(resetWorker(dir, 'nonexistent')).rejects.toThrow('not found')
+  })
+})
+
+describe('setWorkerCheck', () => {
+  it('sets and clears the worker check command', async () => {
+    await addWorker(dir, 'alice')
+    await setWorkerCheck(dir, 'alice', 'npm run ci')
+    let state = await loadState(dir)
+    expect(state.workers.alice.check).toBe('npm run ci')
+
+    await setWorkerCheck(dir, 'alice', '')
+    state = await loadState(dir)
+    expect(state.workers.alice.check).toBeUndefined()
+  })
+})
+
+describe('setWorkerDefaults', () => {
+  it('updates runtime and agent on the worker state', async () => {
+    await addWorker(dir, 'alice')
+    await setWorkerDefaults(dir, 'alice', { runtime: 'sbx', agent: 'codex' })
+    const state = await loadState(dir)
+    expect(state.workers.alice.defaults?.runtime).toBe('sbx')
+    expect(state.workers.alice.defaults?.agent).toBe('codex')
+  })
+})
+
+describe('setWorkerLocation', () => {
+  it('updates the location on the worker state', async () => {
+    await addWorker(dir, 'alice')
+    await setWorkerLocation(dir, 'alice', { type: 'local' })
+    const state = await loadState(dir)
+    expect(state.workers.alice.location).toEqual({ type: 'local' })
+  })
+})
+
+describe('setWorkerSyncRef', () => {
+  it('retargets the ref the worker syncs against', async () => {
+    await addWorker(dir, 'alice')
+    await setWorkerSyncRef(dir, 'alice', 'release')
+    const state = await loadState(dir)
+    expect(state.workers.alice.syncRef).toBe('release')
+  })
+
+  it('throws QuimbyError when the worker does not exist', async () => {
+    await expect(setWorkerSyncRef(dir, 'ghost', 'main')).rejects.toThrow('not found')
+  })
+})
+
+describe('setWorkerTmux', () => {
+  it('opts the worker into tmux and clears the flag', async () => {
+    await addWorker(dir, 'alice')
+    await setWorkerTmux(dir, 'alice', true)
+    let state = await loadState(dir)
+    expect(state.workers.alice.tmux).toBe(true)
+
+    await setWorkerTmux(dir, 'alice', false)
+    state = await loadState(dir)
+    expect(state.workers.alice.tmux).toBeUndefined()
   })
 })

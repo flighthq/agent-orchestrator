@@ -1,7 +1,6 @@
 import { stat, unlink } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 
-import { listPacks } from '@quimbyhq/pack'
 import {
   getQuimbyDir,
   getWorkerDir,
@@ -82,11 +81,6 @@ export async function startServer(opts: ServerOptions): Promise<void> {
       }
       const cached = statusCache.get(name)
       json(res, { ...state.workers[name], currentStatus: cached?.content ?? null })
-      return
-    }
-
-    if (req.method === 'GET' && path === '/api/packs') {
-      json(res, await listPacks(repoRoot))
       return
     }
 

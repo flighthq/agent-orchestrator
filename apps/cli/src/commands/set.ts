@@ -44,7 +44,7 @@ export default defineCommand({
     check: {
       type: 'string',
       alias: 'c',
-      description: 'Verification command run by `quimby pack` (empty string clears it)',
+      description: 'Verification command run before apply/handoff (empty string clears it)',
     },
     sync: {
       type: 'string',

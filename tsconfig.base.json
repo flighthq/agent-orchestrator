@@ -37,8 +37,8 @@
       "@quimbyhq/workspace/*": ["./packages/workspace/src/*"],
       "@quimbyhq/worker": ["./packages/worker/src/index.ts"],
       "@quimbyhq/worker/*": ["./packages/worker/src/*"],
-      "@quimbyhq/pack": ["./packages/pack/src/index.ts"],
-      "@quimbyhq/pack/*": ["./packages/pack/src/*"],
+      "@quimbyhq/handoff": ["./packages/handoff/src/index.ts"],
+      "@quimbyhq/handoff/*": ["./packages/handoff/src/*"],
       "@quimbyhq/server": ["./packages/server/src/index.ts"],
       "@quimbyhq/server/*": ["./packages/server/src/*"]
     }

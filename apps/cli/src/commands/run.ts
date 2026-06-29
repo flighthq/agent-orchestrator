@@ -69,8 +69,8 @@ export async function runRunCommand({
     if (!repoReady) {
       await transport.checkCapabilities(['git', 'rsync', 'tmux'])
       logger.start('Initializing remote worker...')
-      await transport.ensureDir(`${rWorkerDir}/inbox/packs`)
       await transport.ensureDir(`${rWorkerDir}/inbox/status`)
+      await transport.ensureDir(`${rWorkerDir}/outbox`)
       await transport.exec(`git clone ${rRoot} ${rRepoDir}`)
       await transport.exec(`git tag quimby/seed`, { cwd: rRepoDir })
       await configureRemoteWorkerIdentity(transport, rRepoDir, args.name)

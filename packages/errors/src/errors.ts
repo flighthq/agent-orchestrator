@@ -28,13 +28,13 @@ export class WorkerError extends QuimbyError {
   }
 }
 
-export class PackError extends QuimbyError {
+export class HandoffError extends QuimbyError {
   constructor(
     message: string,
-    public packName?: string,
+    public handoffName?: string,
   ) {
-    super(message, 'PACK_ERROR')
-    this.name = 'PackError'
+    super(message, 'HANDOFF_ERROR')
+    this.name = 'HandoffError'
   }
 }
 

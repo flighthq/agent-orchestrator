@@ -64,6 +64,24 @@ describe('isServerRunning', () => {
   })
 })
 
+describe('serverDelete', () => {
+  it('returns false when server is not running', async () => {
+    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(false)
+  })
+
+  it('returns true on 2xx response', async () => {
+    await writeServerJson(7749, process.pid)
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('', { status: 200 }))
+    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(true)
+  })
+
+  it('returns false on non-2xx response', async () => {
+    await writeServerJson(7749, process.pid)
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('Not Found', { status: 404 }))
+    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(false)
+  })
+})
+
 describe('serverGet', () => {
   it('returns null when server is not running', async () => {
     const result = await serverGet(dir, '/api/status')
@@ -102,23 +120,5 @@ describe('serverPost', () => {
     await writeServerJson(7749, process.pid)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('Bad Request', { status: 400 }))
     expect(await serverPost(dir, '/api/subscriptions', {})).toBe(false)
-  })
-})
-
-describe('serverDelete', () => {
-  it('returns false when server is not running', async () => {
-    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(false)
-  })
-
-  it('returns true on 2xx response', async () => {
-    await writeServerJson(7749, process.pid)
-    vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('', { status: 200 }))
-    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(true)
-  })
-
-  it('returns false on non-2xx response', async () => {
-    await writeServerJson(7749, process.pid)
-    vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('Not Found', { status: 404 }))
-    expect(await serverDelete(dir, '/api/subscriptions/a/b')).toBe(false)
   })
 })

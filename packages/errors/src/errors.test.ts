@@ -1,33 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { GitError, PackError, QuimbyError, WorkerError } from './errors'
-
-describe('QuimbyError', () => {
-  it('sets message correctly', () => {
-    const err = new QuimbyError('something went wrong')
-    expect(err.message).toBe('something went wrong')
-  })
-
-  it('sets name to QuimbyError', () => {
-    const err = new QuimbyError('test')
-    expect(err.name).toBe('QuimbyError')
-  })
-
-  it('is an instance of Error', () => {
-    const err = new QuimbyError('test')
-    expect(err instanceof Error).toBe(true)
-  })
-
-  it('sets optional code', () => {
-    const err = new QuimbyError('test', 'MY_CODE')
-    expect(err.code).toBe('MY_CODE')
-  })
-
-  it('code is undefined when not provided', () => {
-    const err = new QuimbyError('test')
-    expect(err.code).toBeUndefined()
-  })
-})
+import { GitError, HandoffError, QuimbyError, WorkerError } from './errors'
 
 describe('GitError', () => {
   it('is instanceof QuimbyError and Error', () => {
@@ -62,6 +35,66 @@ describe('GitError', () => {
   })
 })
 
+describe('HandoffError', () => {
+  it('is instanceof QuimbyError and Error', () => {
+    const err = new HandoffError('handoff not found')
+    expect(err instanceof QuimbyError).toBe(true)
+    expect(err instanceof Error).toBe(true)
+  })
+
+  it('sets name to HandoffError', () => {
+    const err = new HandoffError('handoff not found')
+    expect(err.name).toBe('HandoffError')
+  })
+
+  it('sets message correctly', () => {
+    const err = new HandoffError('Handoff "alice-a1b2c3d4" not found')
+    expect(err.message).toBe('Handoff "alice-a1b2c3d4" not found')
+  })
+
+  it('sets code to HANDOFF_ERROR', () => {
+    const err = new HandoffError('test')
+    expect(err.code).toBe('HANDOFF_ERROR')
+  })
+
+  it('sets optional handoffName', () => {
+    const err = new HandoffError('not found', 'alice-a1b2c3d4')
+    expect(err.handoffName).toBe('alice-a1b2c3d4')
+  })
+
+  it('handoffName is undefined when not provided', () => {
+    const err = new HandoffError('not found')
+    expect(err.handoffName).toBeUndefined()
+  })
+})
+
+describe('QuimbyError', () => {
+  it('sets message correctly', () => {
+    const err = new QuimbyError('something went wrong')
+    expect(err.message).toBe('something went wrong')
+  })
+
+  it('sets name to QuimbyError', () => {
+    const err = new QuimbyError('test')
+    expect(err.name).toBe('QuimbyError')
+  })
+
+  it('is an instance of Error', () => {
+    const err = new QuimbyError('test')
+    expect(err instanceof Error).toBe(true)
+  })
+
+  it('sets optional code', () => {
+    const err = new QuimbyError('test', 'MY_CODE')
+    expect(err.code).toBe('MY_CODE')
+  })
+
+  it('code is undefined when not provided', () => {
+    const err = new QuimbyError('test')
+    expect(err.code).toBeUndefined()
+  })
+})
+
 describe('WorkerError', () => {
   it('is instanceof QuimbyError and Error', () => {
     const err = new WorkerError('worker not found')
@@ -92,38 +125,5 @@ describe('WorkerError', () => {
   it('workerName is undefined when not provided', () => {
     const err = new WorkerError('not found')
     expect(err.workerName).toBeUndefined()
-  })
-})
-
-describe('PackError', () => {
-  it('is instanceof QuimbyError and Error', () => {
-    const err = new PackError('pack not found')
-    expect(err instanceof QuimbyError).toBe(true)
-    expect(err instanceof Error).toBe(true)
-  })
-
-  it('sets name to PackError', () => {
-    const err = new PackError('pack not found')
-    expect(err.name).toBe('PackError')
-  })
-
-  it('sets message correctly', () => {
-    const err = new PackError('Pack "alice-1" not found')
-    expect(err.message).toBe('Pack "alice-1" not found')
-  })
-
-  it('sets code to PACK_ERROR', () => {
-    const err = new PackError('test')
-    expect(err.code).toBe('PACK_ERROR')
-  })
-
-  it('sets optional packName', () => {
-    const err = new PackError('not found', 'alice-1')
-    expect(err.packName).toBe('alice-1')
-  })
-
-  it('packName is undefined when not provided', () => {
-    const err = new PackError('not found')
-    expect(err.packName).toBeUndefined()
   })
 })

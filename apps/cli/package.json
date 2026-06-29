@@ -31,7 +31,7 @@
     "@clack/prompts": "^1.6.0",
     "@quimbyhq/errors": "*",
     "@quimbyhq/git": "*",
-    "@quimbyhq/pack": "*",
+    "@quimbyhq/handoff": "*",
     "@quimbyhq/paths": "*",
     "@quimbyhq/runtimes": "*",
     "@quimbyhq/server": "*",

@@ -69,7 +69,6 @@ export async function addWorker(
   const workerDir = getWorkerDir(repoRoot, name)
   const repoDir = getWorkerRepoDir(repoRoot, name)
 
-  await ensureDir(join(workerDir, 'inbox', 'packs'))
   await ensureDir(join(workerDir, 'inbox', 'status'))
   await ensureDir(getWorkerOutboxDir(repoRoot, name))
 
@@ -234,7 +233,6 @@ export async function resetWorker(repoRoot: string, name: string): Promise<void>
 
     await transport.syncProjectTo(repoRoot, rRoot)
     await transport.exec(`rm -rf ${rRepoDir}`)
-    await transport.ensureDir(`${rWorkerDir}/inbox/packs`)
     await transport.ensureDir(`${rWorkerDir}/inbox/status`)
     await transport.ensureDir(`${rWorkerDir}/outbox`)
     await transport.exec(`git clone ${rRoot} ${rRepoDir}`, { cwd: rQuimby })

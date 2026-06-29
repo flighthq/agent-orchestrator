@@ -1,6 +1,6 @@
 export type { CommitMeta } from './CommitMeta'
+export type { HandoffMeta } from './HandoffMeta'
 export type { LocalLocation } from './LocalLocation'
-export type { PackMeta } from './PackMeta'
 export type { QuimbyState } from './QuimbyState'
 export type { RunSpec } from './RunSpec'
 export type { RuntimeAdapter } from './RuntimeAdapter'

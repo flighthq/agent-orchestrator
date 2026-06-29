@@ -8,7 +8,7 @@ const main = defineCommand({
   meta: {
     name: 'quimby',
     version: '0.2.0',
-    description: 'Dispatch AI agents, review their packs, apply what works',
+    description: 'Dispatch AI agents, review their work, apply what works',
   },
   subCommands: {
     add: () => import('./commands/add').then((m) => m.default),
@@ -17,11 +17,9 @@ const main = defineCommand({
     list: () => import('./commands/list').then((m) => m.default),
     status: () => import('./commands/status').then((m) => m.default),
     assign: () => import('./commands/assign').then((m) => m.default),
-    flush: () => import('./commands/flush').then((m) => m.default),
     diff: () => import('./commands/diff').then((m) => m.default),
-    pack: () => import('./commands/pack').then((m) => m.default),
+    handoff: () => import('./commands/handoff').then((m) => m.default),
     apply: () => import('./commands/apply').then((m) => m.default),
-    send: () => import('./commands/send').then((m) => m.default),
     set: () => import('./commands/set').then((m) => m.default),
     sync: () => import('./commands/sync').then((m) => m.default),
     advance: () => import('./commands/advance').then((m) => m.default),

@@ -1,5 +1,5 @@
 export type { LocalLocation, SSHLocation, WorkerLocation } from '@quimbyhq/types'
-export type { CommitMeta, PackMeta } from '@quimbyhq/types'
+export type { CommitMeta, HandoffMeta } from '@quimbyhq/types'
 export type { RunSpec, RuntimeAdapter, RuntimeContext, RuntimeType } from '@quimbyhq/types'
 export type { QuimbyState, WorkerState } from '@quimbyhq/types'
 export { isSSH } from '@quimbyhq/types'

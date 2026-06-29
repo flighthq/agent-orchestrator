@@ -1,7 +1,6 @@
 import { readdir } from 'node:fs/promises'
 
 import * as git from '@quimbyhq/git'
-import { listPacks } from '@quimbyhq/pack'
 import { getWorkerOutboxDir, tmuxSessionName } from '@quimbyhq/paths'
 import { getServerInfo } from '@quimbyhq/server'
 import { isSSH } from '@quimbyhq/types'
@@ -18,7 +17,7 @@ const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`
 export default defineCommand({
   meta: {
     name: 'list',
-    description: 'List workers, packs, and subscriptions',
+    description: 'List workers and subscriptions',
   },
   run: runListCommand,
 })
@@ -27,12 +26,11 @@ export async function runListCommand() {
   const { state, repoRoot } = await resolveWorkspace()
 
   const workerNames = Object.keys(state.workers)
-  const packs = await listPacks(repoRoot)
   const subs = state.subscriptions ?? {}
   const subEntries = Object.entries(subs)
 
-  if (workerNames.length === 0 && packs.length === 0) {
-    logger.info('No workers or packs. Run `quimby add <name>` to create a worker.')
+  if (workerNames.length === 0) {
+    logger.info('No workers. Run `quimby add <name>` to create a worker.')
     return
   }
 
@@ -70,7 +68,9 @@ export async function runListCommand() {
       const outboxDir = getWorkerOutboxDir(repoRoot, name)
       let outboxStr = ''
       if (await exists(outboxDir)) {
-        const drafts = (await readdir(outboxDir)).filter((e) => e.endsWith('.md'))
+        const drafts = (await readdir(outboxDir, { withFileTypes: true })).filter(
+          (e) => e.isDirectory() && !e.name.startsWith('.'),
+        )
         if (drafts.length > 0) {
           outboxStr = `  ${cyan(`outbox: ${drafts.length}`)}`
         }
@@ -79,16 +79,6 @@ export async function runListCommand() {
       console.log(
         `  ${name}  ${dim(worker.seedCommit.slice(0, 8))}  ${config}${locationStr}${syncStr}${outboxStr}${behindStr}`,
       )
-    }
-  }
-
-  if (packs.length > 0) {
-    if (workerNames.length > 0) console.log()
-    console.log(bold('Packs'))
-    for (const pack of packs) {
-      const desc =
-        pack.description.length > 60 ? pack.description.slice(0, 57) + '...' : pack.description
-      console.log(`  ${pack.name}  ${dim(`from: ${pack.worker}`)}  ${desc}`)
     }
   }
 

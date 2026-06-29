@@ -6,7 +6,7 @@
   },
   "references": [
     {
-      "path": "../pack"
+      "path": "../handoff"
     },
     {
       "path": "../paths"

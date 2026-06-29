@@ -29,7 +29,7 @@ const COMMAND_GROUPS: readonly CommandGroup[] = [
       'remove',
     ],
   },
-  { title: 'Packs & assignments', names: ['assign', 'diff', 'pack', 'apply', 'send', 'flush'] },
+  { title: 'Work & assignments', names: ['assign', 'diff', 'handoff', 'apply'] },
   { title: 'Server', names: ['serve', 'subscribe', 'unsubscribe'] },
   { title: 'Help', names: ['help'] },
 ]

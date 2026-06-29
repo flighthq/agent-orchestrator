@@ -8,7 +8,7 @@ import { defineCommand } from 'citty'
 export default defineCommand({
   meta: {
     name: 'remove',
-    description: 'Remove a worker (packs are kept)',
+    description: 'Remove a worker',
   },
   args: {
     name: {
@@ -44,5 +44,5 @@ export async function runRemoveCommand({ args }: { args: { name: string; force: 
   }
 
   await removeWorker(repoRoot, args.name)
-  logger.success(`Worker "${args.name}" removed (packs preserved)`)
+  logger.success(`Worker "${args.name}" removed`)
 }

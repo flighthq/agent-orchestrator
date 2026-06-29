@@ -11,7 +11,7 @@
     { "path": "./packages/runtimes" },
     { "path": "./packages/workspace" },
     { "path": "./packages/worker" },
-    { "path": "./packages/pack" },
+    { "path": "./packages/handoff" },
     { "path": "./packages/server" }
   ]
 }

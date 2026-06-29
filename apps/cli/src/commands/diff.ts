@@ -1,14 +1,11 @@
 import * as git from '@quimbyhq/git'
-import { readPack } from '@quimbyhq/pack'
-import { getPackDir, getWorkerRepoDir, remoteWorkerRepoDir } from '@quimbyhq/paths'
+import { getWorkerRepoDir, remoteWorkerRepoDir } from '@quimbyhq/paths'
 import { getTransport } from '@quimbyhq/transport'
 import type { WorkerLocation } from '@quimbyhq/types'
 import { isSSH } from '@quimbyhq/types'
-import { exists } from '@quimbyhq/utils'
 import { resolveWorkspace } from '@quimbyhq/workspace'
 import { defineCommand } from 'citty'
 import { execa } from 'execa'
-import { join } from 'pathe'
 
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`
@@ -37,52 +34,40 @@ async function getDiff(
   stat: boolean,
 ): Promise<string> {
   const worker = state.workers[name]
-
-  if (worker) {
-    if (isSSH(worker.location)) {
-      const transport = getTransport(worker.location)
-      const rRepoDir = remoteWorkerRepoDir(state.id, name, worker.location.base)
-      return stat
-        ? transport.exec(`git diff --stat quimby/seed`, { cwd: rRepoDir })
-        : transport.exec(`git diff quimby/seed`, { cwd: rRepoDir })
-    }
-
-    const repoPath = getWorkerRepoDir(repoRoot, name)
-    if (stat) {
-      const { stdout } = await execa('git', ['diff', '--stat', 'quimby/seed'], { cwd: repoPath })
-      return stdout
-    }
-    return git.diff(repoPath, 'quimby/seed')
+  if (!worker) {
+    throw new Error(`"${name}" is not a worker`)
   }
 
-  const packDir = getPackDir(repoRoot, name)
-  if (await exists(join(packDir, 'meta.yaml'))) {
-    if (stat) {
-      const { meta } = await readPack(repoRoot, name)
-      const count = meta.commits.length
-      return `${meta.name}: ${count} commit${count === 1 ? '' : 's'} from ${meta.worker}`
-    }
-    const { squashedDiff } = await readPack(repoRoot, name)
-    return squashedDiff
+  if (isSSH(worker.location)) {
+    const transport = getTransport(worker.location)
+    const rRepoDir = remoteWorkerRepoDir(state.id, name, worker.location.base)
+    return stat
+      ? transport.exec(`git diff --stat quimby/seed`, { cwd: rRepoDir })
+      : transport.exec(`git diff quimby/seed`, { cwd: rRepoDir })
   }
 
-  throw new Error(`"${name}" is not a worker or pack`)
+  const repoPath = getWorkerRepoDir(repoRoot, name)
+  if (stat) {
+    const { stdout } = await execa('git', ['diff', '--stat', 'quimby/seed'], { cwd: repoPath })
+    return stdout
+  }
+  return git.diff(repoPath, 'quimby/seed')
 }
 
 export default defineCommand({
   meta: {
     name: 'diff',
-    description: 'Show changes in a worker or pack',
+    description: "Show a worker's changes against its seed",
   },
   args: {
     name: {
       type: 'positional',
-      description: 'Worker or pack name',
+      description: 'Worker name',
       required: true,
     },
     other: {
       type: 'positional',
-      description: 'Second worker or pack (side-by-side)',
+      description: 'Second worker (side-by-side)',
       required: false,
     },
     stat: {

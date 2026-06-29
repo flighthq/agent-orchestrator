@@ -1,23 +1,24 @@
 import { ConflictError, QuimbyError } from '@quimbyhq/errors'
-import { type ApplyMode, applyPack, readPack } from '@quimbyhq/pack'
-import { getPackDir } from '@quimbyhq/paths'
+import { applyHandoff, type ApplyMode, discardHandoff, readHandoff } from '@quimbyhq/handoff'
+import { getStagingHandoffDir } from '@quimbyhq/paths'
 import { logger } from '@quimbyhq/utils'
 import { resolveWorkspace } from '@quimbyhq/workspace'
 import { defineCommand } from 'citty'
 import { colors } from 'consola/utils'
 import { resolve } from 'pathe'
 
+import { stageParcel } from '../courier'
 import { getQuimbySuccessQuip } from '../quips'
 
 export default defineCommand({
   meta: {
     name: 'apply',
-    description: 'Apply a pack to your repository',
+    description: "Package a worker's work and apply it to your repository",
   },
   args: {
-    pack: {
+    worker: {
       type: 'positional',
-      description: 'Pack name',
+      description: 'Worker to apply (or a staged parcel left by a prior conflict)',
       required: true,
     },
     commits: {
@@ -39,12 +40,27 @@ export default defineCommand({
     branch: {
       type: 'string',
       alias: 'b',
-      description: 'Create a branch before applying (default name: quimby/<pack>)',
+      description: 'Create a branch before applying (default name: quimby/<worker>-<sha>)',
     },
     target: {
       type: 'string',
       alias: 't',
       description: 'Target repo path (defaults to current directory)',
+    },
+    message: {
+      type: 'string',
+      alias: 'm',
+      description: 'Commit message for uncommitted work + suggested apply message',
+    },
+    rebase: {
+      type: 'boolean',
+      description: 'Rebase the worker onto host HEAD before applying',
+      default: false,
+    },
+    'skip-check': {
+      type: 'boolean',
+      description: "Skip the worker's configured verification command",
+      default: false,
     },
   },
   run: runApplyCommand,
@@ -54,15 +70,18 @@ export async function runApplyCommand({
   args,
 }: {
   args: {
-    pack: string
+    worker: string
     commits: boolean
     patch: boolean
     '3way': boolean
     branch?: string
     target?: string
+    message?: string
+    rebase: boolean
+    'skip-check': boolean
   }
 }) {
-  const { repoRoot } = await resolveWorkspace()
+  const { state, repoRoot } = await resolveWorkspace()
 
   if (args.commits && args.patch) {
     throw new QuimbyError('Cannot use --commits and --patch together')
@@ -74,12 +93,30 @@ export async function runApplyCommand({
   const branch: boolean | string | undefined =
     args.branch !== undefined ? (args.branch === '' ? true : args.branch) : undefined
 
-  const { meta } = await readPack(repoRoot, args.pack)
+  // A worker name stages fresh work (committing the dirty tree — apply ships
+  // everything across the membrane); anything else is a parcel already staged
+  // in `.quimby/staging/` (e.g. one a prior conflict left behind).
+  const isWorker = Boolean(state.workers[args.worker])
+  const name = isWorker
+    ? (
+        await stageParcel({
+          state,
+          repoRoot,
+          from: args.worker,
+          message: args.message,
+          commitDirty: true,
+          skipCheck: args['skip-check'],
+          rebase: args.rebase,
+        })
+      ).name
+    : args.worker
 
-  logger.start(`Applying pack "${args.pack}" (${mode} mode${threeWay ? ', 3-way merge' : ''})`)
+  const { meta } = await readHandoff(repoRoot, name)
+
+  logger.start(`Applying "${name}" (${mode} mode${threeWay ? ', 3-way merge' : ''})`)
 
   try {
-    await applyPack({ repoRoot, packName: args.pack, targetRepoPath, mode, branch, threeWay })
+    await applyHandoff({ repoRoot, name, targetRepoPath, mode, branch, threeWay })
   } catch (err) {
     if (err instanceof ConflictError) {
       logger.warn(`${err.message}`)
@@ -87,7 +124,8 @@ export async function runApplyCommand({
       for (const f of err.conflicts) {
         logger.info(`  ${f}`)
       }
-      logger.info(`Pack files: ${getPackDir(repoRoot, args.pack)}`)
+      // Keep the staged parcel so the user can finish the apply by hand.
+      logger.info(`Parcel kept at: ${getStagingHandoffDir(repoRoot, name)}`)
       logger.info('Resolve the conflicts, then run:')
       if (mode === 'commits') {
         logger.info('  git add -A && git am --continue   (or: git am --abort to bail out)')
@@ -99,7 +137,10 @@ export async function runApplyCommand({
     throw err
   }
 
-  logger.success(`Pack "${args.pack}" applied`)
+  // Parcels are ephemeral: once the work has crossed into git, drop the bundle.
+  await discardHandoff(repoRoot, name)
+
+  logger.success(`Applied "${name}"`)
   if (mode === 'patch') {
     logger.info(`Changes in working tree — no commit created. Suggested message:`)
     logger.info(`  ${meta.suggestedMessage}`)

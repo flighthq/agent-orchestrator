@@ -7,7 +7,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   am,
+  amAbort,
   apply,
+  applyThreeWay,
   classifyDiffApplication,
   diff,
   diffStaged,
@@ -71,6 +73,13 @@ describe('am', () => {
   })
 })
 
+describe('amAbort', () => {
+  it('throws when not mid-am', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    await expect(amAbort(dir)).rejects.toThrow()
+  })
+})
+
 describe('apply', () => {
   it('applies a patch to a repo', async () => {
     await makeCommit(dir, 'file.txt', 'original\n', 'initial')
@@ -86,6 +95,26 @@ describe('apply', () => {
 
     const content = await readFile(join(dir, 'file.txt'), 'utf-8')
     expect(content).toBe('modified\n')
+  })
+})
+
+describe('applyThreeWay', () => {
+  it('applies a non-conflicting patch and returns an empty array', async () => {
+    await makeCommit(dir, 'file.txt', 'original\n', 'initial')
+    await writeFile(join(dir, 'file.txt'), 'modified\n')
+    const patchText = await diff(dir, 'HEAD')
+    await execa('git', ['checkout', '--', 'file.txt'], { cwd: dir })
+    const patchFile = join(dir, 'changes.patch')
+    await writeFile(patchFile, patchText)
+    expect(await applyThreeWay(dir, patchFile)).toEqual([])
+    expect(await readFile(join(dir, 'file.txt'), 'utf-8')).toBe('modified\n')
+  })
+
+  it('throws GitError when the patch is completely inapplicable', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    const patchFile = join(dir, 'bad.patch')
+    await writeFile(patchFile, 'this is not a patch')
+    await expect(applyThreeWay(dir, patchFile)).rejects.toThrow()
   })
 })
 
@@ -218,6 +247,11 @@ describe('diffWorkingTree', () => {
 
     expect(await diffWorkingTree(dir, 'HEAD')).toContain('Binary files')
     expect(await diffWorkingTree(dir, 'HEAD', { binary: true })).toContain('GIT binary patch')
+  })
+
+  it('throws GitError when the base ref does not exist', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    await expect(diffWorkingTree(dir, 'nonexistent-sha')).rejects.toThrow()
   })
 })
 

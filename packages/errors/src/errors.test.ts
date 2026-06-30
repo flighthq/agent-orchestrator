@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { AgentError, GitError, HandoffError, QuimbyError } from './errors'
+import { AgentError, ConflictError, GitError, HandoffError, QuimbyError } from './errors'
 
 describe('AgentError', () => {
   it('is instanceof QuimbyError and Error', () => {
@@ -32,6 +32,34 @@ describe('AgentError', () => {
   it('agentName is undefined when not provided', () => {
     const err = new AgentError('not found')
     expect(err.agentName).toBeUndefined()
+  })
+})
+
+describe('ConflictError', () => {
+  it('is instanceof QuimbyError and Error', () => {
+    const err = new ConflictError('merge conflict', ['a.ts'])
+    expect(err instanceof QuimbyError).toBe(true)
+    expect(err instanceof Error).toBe(true)
+  })
+
+  it('sets name to ConflictError', () => {
+    const err = new ConflictError('conflict', ['a.ts'])
+    expect(err.name).toBe('ConflictError')
+  })
+
+  it('sets message correctly', () => {
+    const err = new ConflictError('merge conflict in src/index.ts', ['src/index.ts'])
+    expect(err.message).toBe('merge conflict in src/index.ts')
+  })
+
+  it('sets code to CONFLICT', () => {
+    const err = new ConflictError('test', [])
+    expect(err.code).toBe('CONFLICT')
+  })
+
+  it('stores the conflict file list', () => {
+    const err = new ConflictError('conflicts', ['a.ts', 'b.ts'])
+    expect(err.conflicts).toEqual(['a.ts', 'b.ts'])
   })
 })
 

@@ -101,6 +101,76 @@ describe('applyHandoff', () => {
       }
     })
   }
+
+  it('applies cleanly in patch+threeWay mode leaving changes in the working tree', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await writeFile(join(agentRepoDir, 'feature.txt'), 'new feature\n')
+    await addAll(agentRepoDir)
+    await commit(agentRepoDir, 'add feature')
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    const targetDir = await setupTargetRepo()
+    try {
+      await applyHandoff({
+        repoRoot: dir,
+        name: meta.name,
+        targetRepoPath: targetDir,
+        mode: 'patch',
+        threeWay: true,
+      })
+      expect(await exists(join(targetDir, 'feature.txt'))).toBe(true)
+    } finally {
+      await rm(targetDir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws ConflictError in patch+threeWay mode when files conflict', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await writeFile(join(agentRepoDir, 'base.txt'), 'modified by agent\n')
+    await addAll(agentRepoDir)
+    await commit(agentRepoDir, 'modify base')
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    const targetDir = await setupTargetRepo()
+    try {
+      await writeFile(join(targetDir, 'base.txt'), 'modified by target\n')
+      await execa('git', ['add', '-A'], { cwd: targetDir })
+      await execa('git', ['commit', '-m', 'diverge'], { cwd: targetDir })
+      await expect(
+        applyHandoff({
+          repoRoot: dir,
+          name: meta.name,
+          targetRepoPath: targetDir,
+          mode: 'patch',
+          threeWay: true,
+        }),
+      ).rejects.toThrow('conflict')
+    } finally {
+      await rm(targetDir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws QuimbyError wrapping a non-conflict apply failure', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await writeFile(join(agentRepoDir, 'base.txt'), 'modified by agent\n')
+    await addAll(agentRepoDir)
+    await commit(agentRepoDir, 'modify base')
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    const targetDir = await setupTargetRepo()
+    try {
+      await writeFile(join(targetDir, 'base.txt'), 'modified by target — diverged\n')
+      await execa('git', ['add', '-A'], { cwd: targetDir })
+      await execa('git', ['commit', '-m', 'diverge'], { cwd: targetDir })
+      await expect(
+        applyHandoff({
+          repoRoot: dir,
+          name: meta.name,
+          targetRepoPath: targetDir,
+          mode: 'squashed',
+        }),
+      ).rejects.toThrow('Failed to apply')
+    } finally {
+      await rm(targetDir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('applyHandoff skipFiles', () => {

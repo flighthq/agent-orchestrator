@@ -14,6 +14,7 @@ import {
   createBranch,
   deleteBranch,
   findRoot,
+  getConfig,
   getCurrentBranch,
   getCurrentRef,
   getRemoteUrl,
@@ -22,8 +23,11 @@ import {
   init,
   isClean,
   log,
+  rebase,
+  rebaseAbort,
   resetHard,
   revParse,
+  setConfig,
   stash,
   stashPop,
   tag,
@@ -147,6 +151,20 @@ describe('findRoot', () => {
   })
 })
 
+describe('getConfig', () => {
+  it('returns the configured value for a key', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    await setConfig(dir, 'quimby.test', 'hello')
+    const value = await getConfig(dir, 'quimby.test')
+    expect(value).toBe('hello')
+  })
+
+  it('returns undefined for a key that does not exist', async () => {
+    const value = await getConfig(dir, 'quimby.nonexistent')
+    expect(value).toBeUndefined()
+  })
+})
+
 describe('getCurrentBranch', () => {
   it('returns the checked-out branch name', async () => {
     await makeCommit(dir, 'file.txt', 'content', 'initial')
@@ -255,6 +273,32 @@ describe('log', () => {
   })
 })
 
+describe('rebase', () => {
+  it('replays commits from a feature branch onto an updated base', async () => {
+    await makeCommit(dir, 'base.txt', 'base', 'initial')
+    const { stdout: branch } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd: dir,
+    })
+    const defaultBranch = branch.trim()
+    await createBranch(dir, 'feature')
+    await makeCommit(dir, 'feature.txt', 'feature work', 'add feature')
+    await checkout(dir, defaultBranch)
+    await makeCommit(dir, 'extra.txt', 'extra', 'update base')
+    await checkout(dir, 'feature')
+    await rebase(dir, defaultBranch)
+    const output = await log(dir, 'HEAD', '%s')
+    expect(output).toContain('add feature')
+    expect(output).toContain('update base')
+  })
+})
+
+describe('rebaseAbort', () => {
+  it('is a no-op when not in a rebase', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    await expect(rebaseAbort(dir)).resolves.toBeUndefined()
+  })
+})
+
 describe('resetHard', () => {
   it('resets working tree to ref', async () => {
     await makeCommit(dir, 'file.txt', 'original\n', 'initial')
@@ -272,6 +316,15 @@ describe('revParse', () => {
     const sha = await revParse(dir, 'HEAD')
     expect(sha).toHaveLength(40)
     expect(sha).toMatch(/^[0-9a-f]{40}$/)
+  })
+})
+
+describe('setConfig', () => {
+  it('sets a git config key to the given value', async () => {
+    await makeCommit(dir, 'file.txt', 'content', 'initial')
+    await setConfig(dir, 'quimby.key', 'myvalue')
+    const { stdout } = await execa('git', ['config', 'quimby.key'], { cwd: dir })
+    expect(stdout.trim()).toBe('myvalue')
   })
 })
 

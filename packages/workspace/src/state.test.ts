@@ -2,10 +2,11 @@ import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import type { QuimbyState } from '@quimbyhq/types'
 import { execa } from 'execa'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { loadState, saveState } from './state'
+import { loadState, migrateState, saveState } from './state'
 import { ensureWorkspace } from './workspace'
 
 let dir: string
@@ -36,6 +37,26 @@ describe('loadState', () => {
     expect(state.id).toBeDefined()
     expect(state.agents).toBeDefined()
     expect(state.sourceRepo).toBeDefined()
+  })
+})
+
+describe('migrateState', () => {
+  it('returns false and is a no-op on a clean state', async () => {
+    const state = await loadState(dir)
+    const dirty = migrateState(state)
+    expect(dirty).toBe(false)
+  })
+
+  it('handles state with no agents or workers (null-safe fallback)', () => {
+    const state = {
+      id: 'ws-id',
+      sourceRepo: '/repo',
+      sourceRef: 'main',
+      snapshot: 'abc',
+      createdAt: '2024-01-01T00:00:00.000Z',
+    } as unknown as QuimbyState
+    const dirty = migrateState(state)
+    expect(dirty).toBe(false)
   })
 })
 

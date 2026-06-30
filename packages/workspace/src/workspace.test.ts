@@ -70,6 +70,26 @@ describe('ensureWorkspace', () => {
     expect(second.createdAt).toBe(first.createdAt)
   })
 
+  it('appends .quimby to an existing .gitignore that does not already include it', async () => {
+    await writeFile(join(dir, '.gitignore'), '*.log\nnode_modules\n')
+    await ensureWorkspace(dir)
+    const content = await import('node:fs/promises').then((m) =>
+      m.readFile(join(dir, '.gitignore'), 'utf-8'),
+    )
+    expect(content).toContain('.quimby')
+    expect(content).toContain('*.log')
+  })
+
+  it('does not duplicate .quimby when it is already in .gitignore', async () => {
+    await writeFile(join(dir, '.gitignore'), '*.log\n.quimby\n')
+    await ensureWorkspace(dir)
+    const content = await import('node:fs/promises').then((m) =>
+      m.readFile(join(dir, '.gitignore'), 'utf-8'),
+    )
+    const count = content.split('\n').filter((l) => l.trim() === '.quimby').length
+    expect(count).toBe(1)
+  })
+
   it('migrates state missing id fields by adding stable UUIDs', async () => {
     await ensureDir(join(dir, '.quimby'))
     await writeYaml(getStatePath(dir), {

@@ -114,6 +114,17 @@ describe('readOutboxDraft', () => {
     expect(parsed.note).toBe('promote this work')
   })
 
+  it('returns the raw content when frontmatter is unclosed (no closing ---)', async () => {
+    await setupAgentRepo(dir, 'review')
+    const draft = getAgentOutboxDraftDir(dir, 'review', 'builder')
+    await mkdir(draft, { recursive: true })
+    const raw = '---\nattach: builder\nno closing delimiter here'
+    await writeFile(join(draft, 'README.md'), raw)
+    const parsed = await readOutboxDraft(dir, 'review', 'builder')
+    expect(parsed.attach).toBeUndefined()
+    expect(parsed.note).toBe(raw)
+  })
+
   it('strips frontmatter but returns no attach when no attach: key is present', async () => {
     await setupAgentRepo(dir, 'review')
     const draft = getAgentOutboxDraftDir(dir, 'review', 'builder')

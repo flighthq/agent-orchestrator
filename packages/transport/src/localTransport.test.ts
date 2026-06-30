@@ -60,4 +60,21 @@ describe('LocalTransport', () => {
     const content = await readFile(file, 'utf-8')
     expect(content).toBe('nested content')
   })
+
+  it('exec runs a shell command and returns stdout', async () => {
+    const transport = new LocalTransport()
+    const output = await transport.exec('echo hello')
+    expect(output).toContain('hello')
+  })
+
+  it('exec passes cwd to the shell command', async () => {
+    const transport = new LocalTransport()
+    const output = await transport.exec('pwd', { cwd: dir })
+    expect(output.trim()).toBe(dir)
+  })
+
+  it('runInteractive runs a non-interactive command to completion', async () => {
+    const transport = new LocalTransport()
+    await expect(transport.runInteractive('echo', ['done'], dir)).resolves.toBeUndefined()
+  })
 })

@@ -85,6 +85,14 @@ describe('addAgent', () => {
     await addAgent(dir, 'charlie')
     await expect(addAgent(dir, 'charlie')).rejects.toThrow('already exists')
   })
+
+  it('throws QuimbyError for an agent name that starts with a hyphen', async () => {
+    await expect(addAgent(dir, '-bad')).rejects.toThrow('Invalid agent name')
+  })
+
+  it('throws QuimbyError for the reserved name "host"', async () => {
+    await expect(addAgent(dir, 'host')).rejects.toThrow('reserved')
+  })
 })
 
 describe('rebuildAgent', () => {

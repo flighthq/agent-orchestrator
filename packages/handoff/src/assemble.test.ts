@@ -130,6 +130,19 @@ describe('assembleHandoff', () => {
     expect(meta.commits).toHaveLength(0)
   })
 
+  it('sets suggestedMessage to the last commit subject when there are multiple commits', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await writeFile(join(agentRepoDir, 'first.txt'), 'first\n')
+    await addAll(agentRepoDir)
+    await commit(agentRepoDir, 'first commit')
+    await writeFile(join(agentRepoDir, 'second.txt'), 'second\n')
+    await addAll(agentRepoDir)
+    await commit(agentRepoDir, 'second commit')
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    expect(meta.suggestedMessage).toBe('first commit')
+    expect(meta.commits).toHaveLength(2)
+  })
+
   it('throws when there is neither code nor a note', async () => {
     await setupAgentRepo(dir, 'alice')
     await expect(

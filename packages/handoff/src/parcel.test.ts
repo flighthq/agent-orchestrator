@@ -107,6 +107,22 @@ describe('deliverHandoff', () => {
     expect(await exists(join(inboxParcel, 'meta.yaml'))).toBe(true)
   })
 
+  it('routes a parcel to an SSH agent via transport rsync', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await withFeatureCommit(agentRepoDir)
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    await expect(
+      deliverHandoff({
+        repoRoot: dir,
+        name: meta.name,
+        to: 'remote-agent',
+        toId: 'remote-id',
+        toLocation: { type: 'ssh', host: 'user@host' },
+        projectId: 'proj',
+      }),
+    ).resolves.toBeUndefined()
+  })
+
   it('throws when the parcel has not been staged', async () => {
     await expect(
       deliverHandoff({
@@ -114,6 +130,22 @@ describe('deliverHandoff', () => {
         name: 'ghost-00000000',
         to: 'receiver',
         toId: 'receiver',
+        toLocation: undefined,
+        projectId: 'proj',
+      }),
+    ).rejects.toThrow('not found')
+  })
+
+  it('throws when the recipient agent directory does not exist', async () => {
+    const agentRepoDir = await setupAgentRepo(dir, 'alice')
+    await withFeatureCommit(agentRepoDir)
+    const meta = await assembleHandoff({ repoRoot: dir, from: 'alice', codeSourceId: 'alice' })
+    await expect(
+      deliverHandoff({
+        repoRoot: dir,
+        name: meta.name,
+        to: 'ghost',
+        toId: 'ghost-missing-id',
         toLocation: undefined,
         projectId: 'proj',
       }),
@@ -137,6 +169,19 @@ describe('discardHandoff', () => {
 })
 
 describe('readHandoff', () => {
+  it('returns empty squashedDiff for a note-only parcel', async () => {
+    await setupAgentRepo(dir, 'alice')
+    const created = await assembleHandoff({
+      repoRoot: dir,
+      from: 'alice',
+      codeSourceId: 'alice',
+      note: 'just a note',
+    })
+    const { squashedDiff, note } = await readHandoff(dir, created.name)
+    expect(squashedDiff).toBe('')
+    expect(note).toBe('just a note')
+  })
+
   it('returns meta, diff, and note', async () => {
     const agentRepoDir = await setupAgentRepo(dir, 'alice')
     await withFeatureCommit(agentRepoDir)

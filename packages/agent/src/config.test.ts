@@ -50,6 +50,10 @@ afterEach(async () => {
 })
 
 describe('setAgentDefaults', () => {
+  it('throws QuimbyError when the agent does not exist', async () => {
+    await expect(setAgentDefaults(dir, 'ghost', { runtime: 'sbx' })).rejects.toThrow('not found')
+  })
+
   it('updates runtime and entrypoint on the agent state', async () => {
     await addAgent(dir, 'alice')
     await setAgentDefaults(dir, 'alice', { runtime: 'sbx', entrypoint: 'codex' })
@@ -60,6 +64,10 @@ describe('setAgentDefaults', () => {
 })
 
 describe('setAgentLocation', () => {
+  it('throws QuimbyError when the agent does not exist', async () => {
+    await expect(setAgentLocation(dir, 'ghost', { type: 'local' })).rejects.toThrow('not found')
+  })
+
   it('updates the location on the agent state', async () => {
     await addAgent(dir, 'alice')
     await setAgentLocation(dir, 'alice', { type: 'local' })
@@ -82,6 +90,10 @@ describe('setAgentSyncRef', () => {
 })
 
 describe('setAgentTmux', () => {
+  it('throws QuimbyError when the agent does not exist', async () => {
+    await expect(setAgentTmux(dir, 'ghost', true)).rejects.toThrow('not found')
+  })
+
   it('opts the agent into tmux and clears the flag', async () => {
     await addAgent(dir, 'alice')
     await setAgentTmux(dir, 'alice', true)

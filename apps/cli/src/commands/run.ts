@@ -1,17 +1,20 @@
 import { configureRemoteAgentIdentity } from '@quimbyhq/agent'
 import { QuimbyError } from '@quimbyhq/errors'
 import {
+  getTmuxConfigPath,
+  quimbyTmuxSocket,
   remoteAgentDir,
   remoteAgentRepoDir,
   remoteProjectRoot,
+  remoteTmuxConfigPath,
   tmuxSessionName,
 } from '@quimbyhq/paths'
 import { buildContext, getRuntime, runtimeTypes } from '@quimbyhq/runtimes'
-import { renderAgentClaudeMd } from '@quimbyhq/template'
+import { renderAgentClaudeMd, renderTmuxConfig } from '@quimbyhq/template'
 import { getSSHTransport, sq } from '@quimbyhq/transport'
 import type { RuntimeType } from '@quimbyhq/types'
 import { isSSH } from '@quimbyhq/types'
-import { logger } from '@quimbyhq/utils'
+import { logger, writeText } from '@quimbyhq/utils'
 import { resolveWorkspace, saveState } from '@quimbyhq/workspace'
 import { defineCommand } from 'citty'
 import { execa } from 'execa'
@@ -124,12 +127,15 @@ export async function runRunCommand({
     const launchCmd = [spec.command, ...spec.args.map((a) => (a === entrypoint ? sq(a) : a))].join(
       ' ',
     )
-    // Label the tmux window with the current display name so the on-screen name
-    // tracks renames (the session itself stays UUID-keyed for stable identity).
-    // `automatic-rename off` keeps tmux from overwriting the label with the running
-    // command's name; the rename re-applies on every (re)attach.
-    const titleCmd = `tmux set-window-option automatic-rename off 2>/dev/null; tmux rename-window ${sq(args.name)} 2>/dev/null`
-    const remoteCmd = `${titleCmd}; ${launchCmd}`
+    // Refresh the window label on every (re)attach so it tracks renames (the session
+    // stays UUID-keyed; mouse/colors/history come from the quimby tmux config below).
+    const remoteCmd = `tmux rename-window ${sq(args.name)} 2>/dev/null; ${launchCmd}`
+
+    // Quimby runs its own tmux server (-L) with its own config (-f), so the experience
+    // is consistent without depending on the remote's ~/.tmux.conf (which the config
+    // still sources). Written fresh each run; tmux reads -f only at server start.
+    const rTmuxConf = remoteTmuxConfigPath(state.id, loc.base)
+    await transport.writeFile(rTmuxConf, renderTmuxConfig())
 
     const sessionName = tmuxSessionName(agent.id)
     const runtimeLabel = runtime !== 'local' ? ` [${runtime}]` : ''
@@ -138,6 +144,10 @@ export async function runRunCommand({
     // tmux -A: attach to existing session or create a new one.
     // bash -l: login shell so PATH includes user-installed tools like claude / sbx.
     await transport.runInteractive('tmux', [
+      '-L',
+      quimbyTmuxSocket,
+      '-f',
+      rTmuxConf,
       'new-session',
       '-A',
       '-s',
@@ -186,18 +196,27 @@ export async function runRunCommand({
     const baseCmd = [spec.command, ...spec.args.map((a) => (a === entrypoint ? sq(a) : a))].join(
       ' ',
     )
-    // Label the window with the current display name (rename-tracking); the session
-    // stays UUID-keyed. `automatic-rename off` keeps the label from being overwritten
-    // by the running command. Then hold the pane open if the agent command fails, so
-    // its error is readable instead of the tmux session vanishing with a bare
-    // "[exited]". A clean exit (the user quitting the agent) closes the session normally.
-    const titleCmd = `tmux set-window-option automatic-rename off 2>/dev/null; tmux rename-window ${sq(args.name)} 2>/dev/null`
-    const localCmd = `${titleCmd}; ${baseCmd}; __code=$?; [ "$__code" -eq 0 ] || { printf '\\n[quimby] agent exited with code %s — press Enter to close\\n' "$__code"; read -r _; }`
+    // Refresh the window label on every (re)attach so it tracks renames (mouse/colors/
+    // history come from the quimby tmux config). Then hold the pane open if the agent
+    // command fails so its error is readable instead of the session vanishing with a
+    // bare "[exited]"; a clean exit (the user quitting the agent) closes it normally.
+    const localCmd = `tmux rename-window ${sq(args.name)} 2>/dev/null; ${baseCmd}; __code=$?; [ "$__code" -eq 0 ] || { printf '\\n[quimby] agent exited with code %s — press Enter to close\\n' "$__code"; read -r _; }`
+
+    // Quimby runs its own tmux server (-L) with its own config (-f), so scroll, colors,
+    // and history work without the user having a ~/.tmux.conf (the config sources it if
+    // present). Written fresh each run; tmux reads -f only at server start.
+    const tmuxConf = getTmuxConfigPath(repoRoot)
+    await writeText(tmuxConf, renderTmuxConfig())
+
     logger.success(`Attaching to tmux session "${sessionName}"${runtimeLabel}`)
     try {
       await execa(
         'tmux',
         [
+          '-L',
+          quimbyTmuxSocket,
+          '-f',
+          tmuxConf,
           'new-session',
           '-A',
           '-s',

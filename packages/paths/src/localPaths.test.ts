@@ -16,6 +16,7 @@ import {
   getStagingDir,
   getStagingHandoffDir,
   getStatePath,
+  getTmuxConfigPath,
 } from './localPaths'
 
 describe('getAgentDir', () => {
@@ -113,5 +114,11 @@ describe('getStagingHandoffDir', () => {
 describe('getStatePath', () => {
   it('returns state.yaml path', () => {
     expect(getStatePath('/root')).toBe('/root/.quimby/state.yaml')
+  })
+})
+
+describe('getTmuxConfigPath', () => {
+  it('returns the .quimby/tmux.conf path', () => {
+    expect(getTmuxConfigPath('/root')).toBe('/root/.quimby/tmux.conf')
   })
 })

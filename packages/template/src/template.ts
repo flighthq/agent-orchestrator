@@ -1,3 +1,57 @@
+/**
+ * The tmux config Quimby runs its own isolated server with (`tmux -L quimby -f …`),
+ * so the agent UX is good without depending on the user's `~/.tmux.conf`. Layered:
+ *
+ *  1. Calm aesthetic defaults (a muted status bar showing the agent/window name — no
+ *     default bright-green bar). These are *overridable*.
+ *  2. The user's own `~/.tmux.conf`, sourced if present, so their keybindings and
+ *     theme still apply on Quimby's sessions.
+ *  3. Quimby's functional must-haves, set *last* so they win: true-color passthrough,
+ *     mouse (scroll wheel reaches scrollback), a generous history limit, and stable
+ *     window names (so the per-run `rename-window` to the agent name sticks).
+ *
+ * Colour codes use the 256-palette so they render on any terminal; the must-haves
+ * still enable 24-bit colour for the agent program itself.
+ */
+export function renderTmuxConfig(): string {
+  return (
+    [
+      '# Quimby-managed tmux config (isolated server: tmux -L quimby).',
+      '# Layered: calm defaults → your ~/.tmux.conf (if any) → Quimby must-haves.',
+      '',
+      '# ── Calm defaults (overridden by your own config if you have one) ──',
+      'set -g status on',
+      'set -g status-position bottom',
+      'set -g status-justify left',
+      'set -g status-interval 5',
+      'set -g status-style "bg=colour235,fg=colour250"',
+      'set -g status-left-length 40',
+      'set -g status-left "#[fg=colour109,bold] quimby #[fg=colour240]│ "',
+      'set -g status-right-length 60',
+      'set -g status-right "#[fg=colour245] %a %b %d  %H:%M "',
+      'set -g window-status-format " #W "',
+      'set -g window-status-style "fg=colour244"',
+      'set -g window-status-current-format " #W "',
+      'set -g window-status-current-style "fg=colour231,bg=colour238,bold"',
+      'set -g message-style "bg=colour109,fg=colour235"',
+      'set -g pane-border-style "fg=colour238"',
+      'set -g pane-active-border-style "fg=colour109"',
+      'set -g mode-keys vi',
+      '',
+      '# ── Your own config layers on top (keybindings, theme), if present ──',
+      'source-file -q ~/.tmux.conf',
+      '',
+      '# ── Quimby must-haves (set last so they win; needed for the agent UX) ──',
+      'set -g  default-terminal "tmux-256color"',
+      'set -ga terminal-overrides ",*:Tc"',
+      'set -g  mouse on',
+      'set -g  history-limit 50000',
+      'set -g  automatic-rename off',
+      'set -g  allow-rename off',
+    ].join('\n') + '\n'
+  )
+}
+
 export function renderAgentClaudeMd(opts: { agentName: string; agentId: string }): string {
   const { agentName, agentId } = opts
 

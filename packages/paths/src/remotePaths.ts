@@ -19,7 +19,15 @@ export function remoteAgentRepoDir(projectId: string, agentId: string, base?: st
   return `${remoteAgentDir(projectId, agentId, base)}/repo`
 }
 
+export function remoteTmuxConfigPath(projectId: string, base?: string): string {
+  return `${remoteQuimbyDir(projectId, base)}/tmux.conf`
+}
+
 // ── Stable identifiers ────────────────────────────────────────────────────────
+
+// Quimby runs its tmux sessions on a dedicated server socket, so they never mix with
+// the user's own sessions and Quimby's config never leaks into the default server.
+export const quimbyTmuxSocket = 'quimby'
 
 /**
  * tmux session name derived from the agent's stable id — unaffected by quimby rename.

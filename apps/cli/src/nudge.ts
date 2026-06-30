@@ -1,9 +1,14 @@
-import { tmuxSessionName } from '@quimbyhq/paths'
+import { quimbyTmuxSocket, tmuxSessionName } from '@quimbyhq/paths'
 import { getSSHTransport, sq } from '@quimbyhq/transport'
 import type { AgentState } from '@quimbyhq/types'
 import { isSSH } from '@quimbyhq/types'
 import { logger } from '@quimbyhq/utils'
 import { execa } from 'execa'
+
+// Every quimby tmux command targets the dedicated `-L quimby` server, or it would look
+// at the user's default server and never find the agent sessions.
+const TMUX = ['-L', quimbyTmuxSocket]
+const TMUX_CMD = `tmux ${TMUX.join(' ')}`
 
 /**
  * Whether the agent has a live tmux session right now (`tmux has-session`). False for
@@ -15,9 +20,9 @@ export async function hasAgentSession(agent: Readonly<AgentState>): Promise<bool
   const session = tmuxSessionName(agent.id)
   try {
     if (isSSH(agent.location)) {
-      await getSSHTransport(agent.location).exec(`tmux has-session -t ${sq(session)}`)
+      await getSSHTransport(agent.location).exec(`${TMUX_CMD} has-session -t ${sq(session)}`)
     } else {
-      await execa('tmux', ['has-session', '-t', session])
+      await execa('tmux', [...TMUX, 'has-session', '-t', session])
     }
     return true
   } catch {
@@ -54,16 +59,16 @@ export async function nudgeAgentSession(opts: {
   const session = tmuxSessionName(agent.id)
   // Two send-keys: `-l` types the literal text (no key-name parsing), then a
   // separate Enter submits it to the agent's prompt.
-  const inject = `tmux send-keys -t ${sq(session)} -l ${sq(text)} && tmux send-keys -t ${sq(session)} Enter`
+  const inject = `${TMUX_CMD} send-keys -t ${sq(session)} -l ${sq(text)} && ${TMUX_CMD} send-keys -t ${sq(session)} Enter`
 
   try {
     if (isSSH(agent.location)) {
       const transport = getSSHTransport(agent.location)
-      await transport.exec(`tmux has-session -t ${sq(session)} 2>/dev/null && ${inject}`)
+      await transport.exec(`${TMUX_CMD} has-session -t ${sq(session)} 2>/dev/null && ${inject}`)
     } else {
-      await execa('tmux', ['has-session', '-t', session])
-      await execa('tmux', ['send-keys', '-t', session, '-l', text])
-      await execa('tmux', ['send-keys', '-t', session, 'Enter'])
+      await execa('tmux', [...TMUX, 'has-session', '-t', session])
+      await execa('tmux', [...TMUX, 'send-keys', '-t', session, '-l', text])
+      await execa('tmux', [...TMUX, 'send-keys', '-t', session, 'Enter'])
     }
     logger.success(`Nudged "${displayName}" in tmux session "${session}"`)
   } catch {

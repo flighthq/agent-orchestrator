@@ -33,8 +33,8 @@ An npm-workspace monorepo. The domain is split into one package per capability s
 - `packages/types/` — `@quimbyhq/types` — shared types, **one PascalCase file per interface** (`QuimbyState.ts`, `AgentState.ts`, `HandoffMeta.ts`, `CommitMeta.ts`, `AgentLocation.ts`, `LocalLocation.ts`, `SSHLocation.ts`, `RuntimeAdapter.ts`, `RuntimeContext.ts`, `RunSpec.ts`, `RuntimeType.ts`); `index.ts` is the barrel
 - `packages/errors/` — `@quimbyhq/errors` — error taxonomy (QuimbyError, GitError, AgentError, HandoffError, ConflictError)
 - `packages/utils/` — `@quimbyhq/utils` — tiny generic helpers only: fs, yaml, logger
-- `packages/paths/` — `@quimbyhq/paths` — quimby on-disk + remote layout (getAgentDir, remote\*, tmuxSessionName)
-- `packages/template/` — `@quimbyhq/template` — agent CLAUDE.md / instruction generation
+- `packages/paths/` — `@quimbyhq/paths` — quimby on-disk + remote layout (getAgentDir, remote\*, tmuxSessionName, getTmuxConfigPath, `quimbyTmuxSocket`)
+- `packages/template/` — `@quimbyhq/template` — generated text: agent CLAUDE.md (renderAgentClaudeMd) and the bundled tmux config (renderTmuxConfig)
 - `packages/git/` — `@quimbyhq/git` — typed wrapper over the git CLI
 - `packages/transport/` — `@quimbyhq/transport` — LocalTransport / SSHTransport abstraction (`sq`, getTransport, getSSHTransport)
 - `packages/runtimes/` — `@quimbyhq/runtimes` — execution adapters (local, sbx, openshell) + registry + buildContext
@@ -110,7 +110,7 @@ quimby unsubscribe <agent> <target>                 # remove subscription
 - Flags: `-x` short + `--xxx` long (e.g., `-m`/`--message`, `-c`/`--cmd`, `-s`/`--sync`)
 - `QuimbyState.id` and `AgentState.id` are stable UUIDs; existing state is migrated on load
 - SSH agents are initialized lazily on first `quimby run` (no SSH required at `quimby add`)
-- SSH agents use tmux sessions named `qb-<projectId[:8]>-<agentId[:8]>` for stable identity; local agents can opt into the same tmux session via the `tmux` field on `AgentState`
+- SSH agents use tmux sessions named `qb-<agentId[:8]>` for stable identity; local agents can opt into the same tmux session via the `tmux` field on `AgentState`. All quimby tmux runs on a dedicated server socket (`tmux -L quimby`) started from a bundled config (`renderTmuxConfig` → `.quimby/tmux.conf`), which sources the user's `~/.tmux.conf` then enforces mouse/true-color/history/window-naming. Every tmux call (run, nudge's has-session/send-keys) must pass `-L quimbyTmuxSocket` or it won't see the sessions
 - Remote layout: `~/.quimby/workspaces/<projectId>/.quimby/agents/<id>/`
 - `sq()` in transport.ts: POSIX single-quote escaping for safe SSH command arguments
 - Each command exports a named `run<Name>Command` function at module level (e.g. `runAddCommand`), referenced as `run:` in defineCommand — not inline

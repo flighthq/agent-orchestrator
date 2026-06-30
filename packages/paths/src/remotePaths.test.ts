@@ -5,6 +5,7 @@ import {
   remoteAgentRepoDir,
   remoteProjectRoot,
   remoteQuimbyDir,
+  remoteTmuxConfigPath,
   tmuxSessionName,
 } from './remotePaths'
 
@@ -49,6 +50,12 @@ describe('remoteQuimbyDir', () => {
 
   it('uses base override', () => {
     expect(remoteQuimbyDir('proj-id', '/base')).toBe('/base/.quimby')
+  })
+})
+
+describe('remoteTmuxConfigPath', () => {
+  it('returns tmux.conf under the remote .quimby dir', () => {
+    expect(remoteTmuxConfigPath('proj-id')).toBe('~/.quimby/workspaces/proj-id/.quimby/tmux.conf')
   })
 })
 

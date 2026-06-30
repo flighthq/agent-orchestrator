@@ -17,6 +17,7 @@ const main = defineCommand({
     list: () => import('./commands/list').then((m) => m.default),
     status: () => import('./commands/status').then((m) => m.default),
     assign: () => import('./commands/assign').then((m) => m.default),
+    nudge: () => import('./commands/nudge').then((m) => m.default),
     diff: () => import('./commands/diff').then((m) => m.default),
     handoff: () => import('./commands/handoff').then((m) => m.default),
     dispatch: () => import('./commands/dispatch').then((m) => m.default),

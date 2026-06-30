@@ -35,4 +35,11 @@ describe('run', () => {
       } as never),
     ).rejects.toThrow('not found')
   })
+
+  it('nudge is an optional boolean with no default (auto: nudge only when a note is present)', async () => {
+    const { default: cmd } = await import('./handoff')
+    const args = cmd.args as Record<string, { type: string; default?: unknown }>
+    expect(args.nudge.type).toBe('boolean')
+    expect(args.nudge.default).toBeUndefined()
+  })
 })

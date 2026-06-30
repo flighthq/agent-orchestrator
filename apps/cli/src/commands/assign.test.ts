@@ -21,9 +21,9 @@ describe('run', () => {
     ).rejects.toThrow('not found')
   })
 
-  it('exposes a --nudge flag to wake a running agent over tmux', async () => {
+  it('nudges a running agent over tmux by default (--no-nudge to skip)', async () => {
     const { default: cmd } = await import('./assign')
-    const args = cmd.args as Record<string, { type: string; alias?: string }>
-    expect(args.nudge).toMatchObject({ type: 'boolean', alias: 'n' })
+    const args = cmd.args as Record<string, { type: string; default?: boolean }>
+    expect(args.nudge).toMatchObject({ type: 'boolean', default: true })
   })
 })

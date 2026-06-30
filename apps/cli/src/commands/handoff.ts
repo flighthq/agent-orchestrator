@@ -1,10 +1,12 @@
 import { QuimbyError } from '@quimbyhq/errors'
 import { assembleHostHandoff, deliverHandoff, discardHandoff, HOST_SENDER } from '@quimbyhq/handoff'
+import type { AgentState } from '@quimbyhq/types'
 import { logger } from '@quimbyhq/utils'
 import { resolveWorkspace } from '@quimbyhq/workspace'
 import { defineCommand } from 'citty'
 
 import { stageParcel } from '../courier'
+import { nudgeAgentSession } from '../nudge'
 
 export default defineCommand({
   meta: {
@@ -36,6 +38,11 @@ export default defineCommand({
       description: 'Rebase the code source onto host HEAD before packaging',
       default: false,
     },
+    nudge: {
+      type: 'boolean',
+      description:
+        'Wake the recipient via its tmux session. Default: nudge only when the parcel carries a note (-m); --nudge / --no-nudge force it',
+    },
   },
   run: runHandoffCommand,
 })
@@ -49,6 +56,7 @@ export async function runHandoffCommand({
     message?: string
     attach?: string
     rebase: boolean
+    nudge?: boolean
   }
 }) {
   const { state, repoRoot } = await resolveWorkspace()
@@ -62,6 +70,10 @@ export async function runHandoffCommand({
   if (!recip) {
     throw new QuimbyError(`Agent "${recipient}" not found`)
   }
+
+  // A handoff is often pure data (a diff with no note); the note is the instruction
+  // half, so by default nudge only when one is present. --nudge / --no-nudge override.
+  const shouldNudge = args.nudge ?? Boolean(args.message)
 
   if (fromHost) {
     const meta = await assembleHostHandoff({
@@ -80,6 +92,7 @@ export async function runHandoffCommand({
     })
     await discardHandoff(repoRoot, meta.name)
     logger.success(`Handed off from ${HOST_SENDER} to "${recipient}"`)
+    if (shouldNudge) await nudgeRecipient(state.id, recip, recipient, meta.name)
     return
   }
 
@@ -107,4 +120,19 @@ export async function runHandoffCommand({
   })
   await discardHandoff(repoRoot, meta.name)
   logger.success(`Handed off from "${source}" to "${recipient}"`)
+  if (shouldNudge) await nudgeRecipient(state.id, recip, recipient, meta.name)
+}
+
+async function nudgeRecipient(
+  projectId: string,
+  recip: Readonly<AgentState>,
+  displayName: string,
+  parcelName: string,
+): Promise<void> {
+  await nudgeAgentSession({
+    projectId,
+    agent: recip,
+    displayName,
+    text: `New handoff in your inbox: @inbox/${parcelName}/ — please review.`,
+  })
 }

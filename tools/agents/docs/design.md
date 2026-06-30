@@ -195,10 +195,11 @@ quimby set <agent> [-r <rt>] [-c <cmd>] [-H <host>] [--port <n>] [-s <ref>]   Up
 quimby help [command]                                 Root help (grouped, with banner) or usage for a single command
 quimby list                                           Show agents and subscriptions
 quimby status [agent]                                Show agent-written status
-quimby assign <agent> -m "..." | @file [-n]          Set an agent's current task (writes assignment.md); -n/--nudge wakes a running agent via its tmux session
+quimby assign <agent> -m "..." | @file [--no-nudge]  Set an agent's current task (writes assignment.md); by default wakes a running agent via its tmux session (--no-nudge to skip)
 quimby diff <agent> [agent2]                         Show an agent's live diff against its seed
-quimby handoff <from> <to> | <to> [-m "..."] [--attach <w>]   Carry <from>'s work to <to>; with one arg, the host's work → that agent
-quimby dispatch <agent>                              Deliver the agent's queued outbox parcels to their recipients
+quimby nudge <agent> [-m "..."]                      Wake a running agent by typing a message (default "continue") into its tmux session; -m also carries CLI control commands ("/clear", "/model …")
+quimby handoff <from> <to> | <to> [-m "..."] [--attach <w>] [--nudge|--no-nudge]   Carry <from>'s work to <to>; with one arg, the host's work → that agent (nudges the recipient by default only when a note is present)
+quimby dispatch <agent> [--no-nudge]                 Deliver the agent's queued outbox parcels to their recipients (wakes each running recipient via its tmux session by default)
 quimby apply <agent> [--commits|--patch] [--3way] [-b] [-t]   Apply the agent's work to your repo (the boundary)
 quimby sync <agent...> [--all] [-f] [--base <ref>]   Sync agent(s) to their base, keeping work (-f hard-resets; --base retargets)
 quimby rebuild <agent> --force                       Recreate an agent from current source (discards its work and mailbox)
@@ -227,7 +228,8 @@ The only place a build is verifiable is where the deps were installed — inside
 All flags support `-x` short and `--xxx` long forms:
 
 - `-m` / `--message` (assign, handoff)
-- `-n` / `--nudge` (assign — wake a running agent via its tmux session)
+- `-m` / `--message` (nudge — the text to type; defaults to a generic check-in)
+- `--nudge` / `--no-nudge` (assign, dispatch — wake a running recipient via its tmux session, on by default; handoff — same, but auto-decided by note presence unless forced)
 - `--attach` (handoff — carry a different agent's diff than the source)
 - `-p` / `--port` (serve, add, set)
 - `-c` / `--cmd` (run, set, add — the agent's entrypoint command)
@@ -387,6 +389,7 @@ Diff operates on agents only. Handoffs are carried, not stored, so there is noth
 - **SSH lazy init**: SSH agents are not set up remotely at `quimby add` time. The remote clone, tagging, and scaffolding happen on first `quimby run`. This allows adding SSH agents without an active SSH connection.
 - **rsync as transport**: SSH agents sync the project source via rsync before each run. The remote clone is a local clone of the rsynced source tree — no direct git remote needed on the agent side.
 - **tmux for SSH persistence**: SSH agents run in named tmux sessions. Disconnecting from a session doesn't kill the agent. `quimby run` reattaches to an existing session if one exists. Local agents can opt into the same behavior via the `tmux` field on `AgentState` — `quimby run` then wraps the local agent in `tmux new-session -A` against the stable-ID session name.
+- **Nudge: wake a live agent in place, policy per movement**: writing `assignment.md` or dropping a parcel in an inbox is silent — a running interactive agent won't notice until its next prompt, leaving the user to switch terminals and type by hand. So quimby can inject `<text>` + Return into the agent's tmux session (`tmux send-keys`, keyed by the agent's stable UUID, so a rename never loses it). The default policy follows how directed the movement is: **assign** always nudges (you named one agent and gave it a task), **dispatch** nudges by default (the boss agent authored an addressed note with intent), **handoff** nudges only when the parcel carries a **note** — the instruction half — since a handoff is often pure data (a diff with no note); `--nudge`/`--no-nudge` force either way. The standalone **`quimby nudge <agent> [-m]`** is the explicit, ad-hoc live channel: no `-m` types `"continue"` (the lightest kick), and `-m` types arbitrary text verbatim — including CLI control commands like `/clear` or `/model …`. The text is the wake-up; the durable work still lives in `assignment.md`/the inbox, so a missed or skipped nudge only delays, never loses. A local non-tmux agent runs in the foreground (the user is already attached), so there is nothing to wake. There is deliberately **no separate `send` verb**: a first-class "send the agent instructions" command would compete with `assign` for the task-giving slot and tempt users onto an ephemeral channel when they need a durable task; folding arbitrary/control sends into `nudge -m` keeps the capability without advertising a verb that cannibalizes `assign`. Durable task-of-record is `assign`'s job; `nudge` is the live, ephemeral poke.
 - **Transport abstraction**: All agent I/O goes through `LocalTransport` or `SSHTransport`. Commands don't need to know where an agent lives — they call `transport.exec`, `transport.writeFile`, `transport.rsyncTo`, etc.
 - **Transport never commits**: Work is captured from the agent's working tree (committed + uncommitted + untracked) via a throwaway index, so `handoff`/`dispatch`/`sync` never make a commit in an agent — frequent use never litters its history, and agents needn't use git at all. The only commit is the optional one at `apply`, the boundary.
 - **Three levels of "catch up"**: `sync` keeps the agent's work (rebases it); `sync -f` drops the work but keeps the agent (mailbox intact); `rebuild --force` recreates the agent (mailbox cleared). `sync -f` resets the code; `rebuild` resets the agent. Destructive levels require an explicit flag.

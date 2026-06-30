@@ -126,7 +126,10 @@ export async function runRunCommand({
     )
     // Label the tmux window with the current display name so the on-screen name
     // tracks renames (the session itself stays UUID-keyed for stable identity).
-    const remoteCmd = `tmux rename-window ${sq(args.name)} 2>/dev/null; ${launchCmd}`
+    // `automatic-rename off` keeps tmux from overwriting the label with the running
+    // command's name; the rename re-applies on every (re)attach.
+    const titleCmd = `tmux set-window-option automatic-rename off 2>/dev/null; tmux rename-window ${sq(args.name)} 2>/dev/null`
+    const remoteCmd = `${titleCmd}; ${launchCmd}`
 
     const sessionName = tmuxSessionName(state.id, agent.id)
     const runtimeLabel = runtime !== 'local' ? ` [${runtime}]` : ''
@@ -139,6 +142,8 @@ export async function runRunCommand({
       '-A',
       '-s',
       sessionName,
+      '-n',
+      args.name, // window label (display name); session stays UUID-keyed
       '-c',
       rAgentDir, // unquoted so the remote shell expands ~
       'bash',
@@ -182,10 +187,12 @@ export async function runRunCommand({
       ' ',
     )
     // Label the window with the current display name (rename-tracking); the session
-    // stays UUID-keyed. Then hold the pane open if the agent command fails, so its
-    // error is readable instead of the tmux session vanishing with a bare "[exited]".
-    // A clean exit (the user quitting the agent) closes the session normally.
-    const localCmd = `tmux rename-window ${sq(args.name)} 2>/dev/null; ${baseCmd}; __code=$?; [ "$__code" -eq 0 ] || { printf '\\n[quimby] agent exited with code %s — press Enter to close\\n' "$__code"; read -r _; }`
+    // stays UUID-keyed. `automatic-rename off` keeps the label from being overwritten
+    // by the running command. Then hold the pane open if the agent command fails, so
+    // its error is readable instead of the tmux session vanishing with a bare
+    // "[exited]". A clean exit (the user quitting the agent) closes the session normally.
+    const titleCmd = `tmux set-window-option automatic-rename off 2>/dev/null; tmux rename-window ${sq(args.name)} 2>/dev/null`
+    const localCmd = `${titleCmd}; ${baseCmd}; __code=$?; [ "$__code" -eq 0 ] || { printf '\\n[quimby] agent exited with code %s — press Enter to close\\n' "$__code"; read -r _; }`
     logger.success(`Attaching to tmux session "${sessionName}"${runtimeLabel}`)
     try {
       await execa(
@@ -195,6 +202,8 @@ export async function runRunCommand({
           '-A',
           '-s',
           sessionName,
+          '-n',
+          args.name, // window label (display name); session stays UUID-keyed
           '-c',
           spec.cwd ?? repoRoot,
           ...envArgs,

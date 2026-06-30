@@ -26,7 +26,8 @@ An npm-workspace monorepo. The domain is split into one package per capability s
 - `apps/cli/` — the `quimby` binary; commands only
   - `src/cli.ts` — entry point (citty root command, flat subcommands; intercepts `help`/`-h`/`--help`)
   - `src/index.ts` — public API (type re-exports)
-  - `src/commands/` — one file per command (add, config, run, list, status, assign, diff, handoff, dispatch, apply, sync, rebuild, rename, remove, set, serve, subscribe, unsubscribe)
+  - `src/commands/` — one file per command (add, config, run, list, status, assign, nudge, diff, handoff, dispatch, apply, sync, rebuild, rename, remove, set, serve, subscribe, unsubscribe)
+  - `src/nudge.ts` — shared `nudgeAgentSession` (inject text + Return into an agent's tmux session), reused by assign, dispatch, handoff, and the standalone `nudge` command
   - `src/courier.ts` — shared `stageParcel` (optional rebase → assemble a commit-free working-tree parcel), reused by apply and handoff
   - `src/banner.ts` — colored wordmark on root help; `src/help.ts` — grouped root-help renderer; `src/walkthrough.ts` — interactive agent config (`@clack/prompts`)
 - `packages/types/` — `@quimbyhq/types` — shared types, **one PascalCase file per interface** (`QuimbyState.ts`, `AgentState.ts`, `HandoffMeta.ts`, `CommitMeta.ts`, `AgentLocation.ts`, `LocalLocation.ts`, `SSHLocation.ts`, `RuntimeAdapter.ts`, `RuntimeContext.ts`, `RunSpec.ts`, `RuntimeType.ts`); `index.ts` is the barrel
@@ -77,10 +78,11 @@ quimby set <agent> [-r <rt>] [-c <cmd>] [-H <host>] [--port <n>] [-s <ref>]  # u
 quimby list                                          # show agents and subscriptions
 quimby help [command]                                # root help (grouped + banner), or usage for one command
 quimby status [agent]                               # show agent-written status
-quimby assign <agent> -m "..." [-n]                 # set an agent's current task (assignment.md); -n/--nudge wakes a running agent by injecting a notice + Return into its tmux session
+quimby assign <agent> -m "..." [--no-nudge]         # set an agent's current task (assignment.md); by default wakes a running agent by injecting "Here's your assignment: @assignment.md" + Return into its tmux session (--no-nudge to skip)
 quimby diff <agent> [agent2]                        # show an agent's live diff against its seed
-quimby handoff <from> <to> | <to> [-m <note>] [--attach <w>] [--rebase]  # carry <from>'s work to <to>; with one arg, the host's work → that agent (sender "host")
-quimby dispatch <agent> [--rebase]  # deliver the agent's queued outbox parcels to their recipients (bounces unknown recipients; drains to outbox/.sent on success)
+quimby nudge <agent> [-m <msg>]                     # wake a running agent by typing a message (default "continue") + Return into its tmux session; -m also carries CLI control commands ("/clear", "/model …")
+quimby handoff <from> <to> | <to> [-m <note>] [--attach <w>] [--rebase] [--nudge|--no-nudge]  # carry <from>'s work to <to>; with one arg, the host's work → that agent (sender "host"); nudges the recipient by default only when a note (-m) is present
+quimby dispatch <agent> [--rebase] [--no-nudge]  # deliver the agent's queued outbox parcels to their recipients (bounces unknown recipients; drains to outbox/.sent on success); nudges each running recipient via tmux by default
 quimby apply <agent> [--commits|--patch] [--3way] [-b] [-t] [--rebase]  # package the agent's work and apply it (auto-commits dirty tree; --3way merges conflicts; keeps the parcel on conflict)
 quimby sync <agent...> [--all] [-f] [--base <ref>]  # sync agent(s) to their syncRef tip, keeping work (auto-stash/rebase/pop); -f hard-resets (drops work, keeps mailbox); --base retargets; rsyncs SSH agents
 quimby rebuild <agent> --force                       # recreate agent from current source (requires --force; discards work + clears inbox/outbox/assignment/status)

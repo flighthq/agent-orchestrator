@@ -18,8 +18,14 @@ describe('run', () => {
     const { default: cmd } = await import('./dispatch')
     await expect(
       cmd.run!({
-        args: { agent: 'ghost', rebase: false },
+        args: { agent: 'ghost', rebase: false, nudge: true },
       } as never),
     ).rejects.toThrow('not found')
+  })
+
+  it('nudges running recipients over tmux by default (--no-nudge to skip)', async () => {
+    const { default: cmd } = await import('./dispatch')
+    const args = cmd.args as Record<string, { type: string; default?: boolean }>
+    expect(args.nudge).toMatchObject({ type: 'boolean', default: true })
   })
 })

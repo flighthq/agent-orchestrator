@@ -11,6 +11,7 @@ import { resolveWorkspace } from '@quimbyhq/workspace'
 import { defineCommand } from 'citty'
 
 import { stageParcel } from '../courier'
+import { nudgeAgentSession } from '../nudge'
 
 export default defineCommand({
   meta: {
@@ -28,11 +29,21 @@ export default defineCommand({
       description: 'Rebase each code source onto host HEAD before packaging',
       default: false,
     },
+    nudge: {
+      type: 'boolean',
+      description:
+        'Wake each running recipient by injecting an inbox notice + Return into its tmux session (on by default; --no-nudge to skip)',
+      default: true,
+    },
   },
   run: runDispatchCommand,
 })
 
-export async function runDispatchCommand({ args }: { args: { agent: string; rebase: boolean } }) {
+export async function runDispatchCommand({
+  args,
+}: {
+  args: { agent: string; rebase: boolean; nudge: boolean }
+}) {
   const { state, repoRoot } = await resolveWorkspace()
 
   if (!state.agents[args.agent]) {
@@ -74,6 +85,17 @@ export async function runDispatchCommand({ args }: { args: { agent: string; reba
       await discardHandoff(repoRoot, meta.name)
       await markHandoffSent(repoRoot, senderId, recipient)
       logger.success(`Delivered to "${recipient}"`)
+
+      if (args.nudge) {
+        // Point the recipient at the parcel just dropped in its inbox (the inbox sits
+        // in the agent's cwd, named by sender + content hash).
+        await nudgeAgentSession({
+          projectId: state.id,
+          agent: recip,
+          displayName: recipient,
+          text: `New handoff in your inbox: @inbox/${meta.name}/ — please review.`,
+        })
+      }
     } catch (err) {
       logger.warn(
         `Failed to deliver to "${recipient}" (left in outbox): ${err instanceof Error ? err.message : err}`,

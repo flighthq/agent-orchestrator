@@ -43,6 +43,11 @@ export default defineCommand({
       alias: 'r',
       description: `Runtime override for this run (${runtimeTypes.join(', ')})`,
     },
+    host: {
+      type: 'boolean',
+      default: true,
+      description: 'Include a host shell tab in the dashboard (default: true; --no-host to omit)',
+    },
   },
   run: runRunCommand,
 })
@@ -50,11 +55,12 @@ export default defineCommand({
 export async function runRunCommand({
   args,
 }: {
-  args: { name: string; _?: string[]; cmd?: string; runtime?: string }
+  args: { name: string; _?: string[]; cmd?: string; runtime?: string; host?: boolean }
 }) {
   // citty puts every positional in `args._` (including the one bound to `name`), so a
   // plain concat would duplicate the first agent — dedupe, as `sync` does.
   const names = [...new Set([args.name, ...(args._ ?? [])].filter((n): n is string => Boolean(n)))]
+    .filter((n) => n !== HOST_WINDOW)
 
   if (names.length > 1) {
     if (args.cmd) {
@@ -65,7 +71,7 @@ export async function runRunCommand({
         '--runtime applies to a single agent; omit it when running multiple agents',
       )
     }
-    await runDashboard(names)
+    await runDashboard(names, args.host !== false)
     return
   }
 
@@ -209,11 +215,11 @@ type DashboardTab =
   | { name: string; kind: 'link'; srcSession: string }
   | { name: string; kind: 'window'; cwd: string; cmd: string[]; env?: [string, string][] }
 
-async function runDashboard(names: string[]): Promise<void> {
+async function runDashboard(names: string[], includeHost: boolean): Promise<void> {
   const { state, repoRoot } = await resolveWorkspace()
 
   for (const name of names) {
-    if (name !== HOST_WINDOW && !state.agents[name]) {
+    if (!state.agents[name]) {
       throw new QuimbyError(`Agent "${name}" not found`)
     }
   }
@@ -223,14 +229,14 @@ async function runDashboard(names: string[]): Promise<void> {
   await writeText(tmuxConf, renderTmuxConfig())
 
   // Resolve each requested tab, ensuring a local agent has its own live session first so
-  // the dashboard can link (not own) it.
+  // the dashboard can link (not own) it. The host shell tab is prepended automatically
+  // unless --no-host was passed.
   const tabs: DashboardTab[] = []
+  if (includeHost) {
+    tabs.push({ name: HOST_TAB_NAME, kind: 'window', cwd: repoRoot, cmd: ['bash', '-l'] })
+  }
   let enrolled = false
   for (const name of names) {
-    if (name === HOST_WINDOW) {
-      tabs.push({ name: HOST_TAB_NAME, kind: 'window', cwd: repoRoot, cmd: ['bash', '-l'] })
-      continue
-    }
     const agent = state.agents[name]
     if (isSSH(agent.location)) {
       const w = await buildSSHWindow(name, agent, state, repoRoot)
@@ -489,6 +495,9 @@ async function styleDashboard(
   await execa('tmux', [...TMUX, 'set-option', '-t', session, 'base-index', '0'])
   await execa('tmux', [...TMUX, 'set-option', '-t', session, 'renumber-windows', 'on'])
   await execa('tmux', [...TMUX, 'move-window', '-r', '-t', session])
+  // The dashboard is ephemeral — destroy it when the user detaches. Linked windows
+  // survive in their own agent sessions; only the dashboard's references are dropped.
+  await execa('tmux', [...TMUX, 'set-option', '-t', session, 'destroy-unattached', 'on'])
 
   // ── Host tab: auto-rename with "$" prefix ───────────────────────────────────
   // The bundled tmux config disables auto-rename globally to keep agent window names

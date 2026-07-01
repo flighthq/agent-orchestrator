@@ -59,8 +59,9 @@ export async function runRunCommand({
 }) {
   // citty puts every positional in `args._` (including the one bound to `name`), so a
   // plain concat would duplicate the first agent — dedupe, as `sync` does.
-  const names = [...new Set([args.name, ...(args._ ?? [])].filter((n): n is string => Boolean(n)))]
-    .filter((n) => n !== HOST_WINDOW)
+  const names = [
+    ...new Set([args.name, ...(args._ ?? [])].filter((n): n is string => Boolean(n))),
+  ].filter((n) => n !== HOST_WINDOW)
 
   if (names.length > 1) {
     if (args.cmd) {
@@ -495,9 +496,11 @@ async function styleDashboard(
   await execa('tmux', [...TMUX, 'set-option', '-t', session, 'base-index', '0'])
   await execa('tmux', [...TMUX, 'set-option', '-t', session, 'renumber-windows', 'on'])
   await execa('tmux', [...TMUX, 'move-window', '-r', '-t', session])
-  // The dashboard is ephemeral — destroy it when the user detaches. Linked windows
-  // survive in their own agent sessions; only the dashboard's references are dropped.
-  await execa('tmux', [...TMUX, 'set-option', '-t', session, 'destroy-unattached', 'on'])
+  // The dashboard is ephemeral — destroy it when the user detaches. A hook is used
+  // instead of `destroy-unattached` because the session is created detached (`-d`) and
+  // `destroy-unattached` would fire immediately (zero clients = already unattached).
+  // Linked windows survive in their own agent sessions.
+  await execa('tmux', [...TMUX, 'set-hook', '-t', session, 'client-detached', 'kill-session'])
 
   // ── Host tab: auto-rename with "$" prefix ───────────────────────────────────
   // The bundled tmux config disables auto-rename globally to keep agent window names

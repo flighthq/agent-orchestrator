@@ -3,6 +3,8 @@ import { readdir } from 'node:fs/promises'
 import { getAgentPendingWork, getAgentSyncStatus } from '@quimbyhq/agent'
 import { getAgentOutboxDir, tmuxSessionName } from '@quimbyhq/paths'
 import { getServerInfo } from '@quimbyhq/server'
+import { getAgentSessionState } from '@quimbyhq/session'
+import type { AgentSessionState } from '@quimbyhq/types'
 import { isSSH } from '@quimbyhq/types'
 import { exists } from '@quimbyhq/utils'
 import { logger } from '@quimbyhq/utils'
@@ -41,7 +43,7 @@ export async function runListCommand() {
       const agent = state.agents[name]
       const defaults = agent.defaults
 
-      const [syncStatus, pending, outboxDrafts] = await Promise.all([
+      const [syncStatus, pending, outboxDrafts, sessionState] = await Promise.all([
         getAgentSyncStatus(repoRoot, agent, state.sourceRef).catch(() => ({
           behind: 0,
           syncRef: agent.syncRef ?? state.sourceRef,
@@ -56,6 +58,7 @@ export async function runListCommand() {
           )
           return drafts.length
         })(),
+        getAgentSessionState(agent).catch((): AgentSessionState => 'stopped'),
       ])
 
       const { behind, syncRef: resolvedSyncRef } = syncStatus
@@ -83,10 +86,20 @@ export async function runListCommand() {
         if (parts.length > 0) pendingStr = `  ${green(`● ${parts.join(', ')}`)}`
       }
 
+      // running = detached (headless, `quimby start`); attached = a client is in
+      // `quimby run`; stopped = no session. A local non-tmux agent reads as stopped
+      // (it has no session to probe even while a foreground `run` is live).
+      const stateStr =
+        sessionState === 'attached'
+          ? cyan('● attached')
+          : sessionState === 'running'
+            ? green('● running')
+            : dim('○ stopped')
+
       // The short id matches the tmux session (`qb-<id8>`) and sandbox names, so the
       // roster correlates with `tmux ls` / `sbx ls`.
       console.log(
-        `  ${name}  ${dim(`id:${agent.id.slice(0, 8)}`)}  ${dim(`seed:${agent.seedCommit.slice(0, 8)}`)}  ${config}${locationStr}${syncStr}${outboxStr}${pendingStr}${behindStr}`,
+        `  ${name}  ${stateStr}  ${dim(`id:${agent.id.slice(0, 8)}`)}  ${dim(`seed:${agent.seedCommit.slice(0, 8)}`)}  ${config}${locationStr}${syncStr}${outboxStr}${pendingStr}${behindStr}`,
       )
     }
   }

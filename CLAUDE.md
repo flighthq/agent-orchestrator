@@ -26,10 +26,11 @@ An npm-workspace monorepo. The domain is split into one package per capability s
 - `apps/cli/` — the `quimby` binary; commands only
   - `src/cli.ts` — entry point (citty root command, flat subcommands; intercepts `help`/`-h`/`--help`)
   - `src/index.ts` — public API (type re-exports)
-  - `src/commands/` — one file per command (add, config, run, list, status, assign, nudge, diff, handoff, dispatch, apply, sync, rebuild, rename, remove, set, serve, subscribe, unsubscribe)
+  - `src/commands/` — one file per command (add, config, run, start, stop, list, status, assign, nudge, diff, handoff, dispatch, apply, sync, rebuild, rename, remove, set, serve, subscribe, unsubscribe)
   - `src/courier.ts` — shared `stageParcel` (optional rebase → assemble a commit-free working-tree parcel), reused by apply and handoff
+  - `src/launch.ts` — shared tmux launch prep (`prepareLocalTmuxLaunch`, `prepareSshLaunch`): SSH sync + lazy init, runtime spec, bundled tmux config; reused by run (attach) and start (detached)
   - `src/banner.ts` — colored wordmark on root help; `src/help.ts` — grouped root-help renderer; `src/walkthrough.ts` — interactive agent config (`@clack/prompts`)
-- `packages/types/` — `@quimbyhq/types` — shared types, **one PascalCase file per interface** (`QuimbyState.ts`, `AgentState.ts`, `HandoffMeta.ts`, `CommitMeta.ts`, `AgentLocation.ts`, `LocalLocation.ts`, `SSHLocation.ts`, `RuntimeAdapter.ts`, `RuntimeContext.ts`, `RunSpec.ts`, `RuntimeType.ts`); `index.ts` is the barrel
+- `packages/types/` — `@quimbyhq/types` — shared types, **one PascalCase file per interface** (`QuimbyState.ts`, `AgentState.ts`, `AgentSessionState.ts`, `HandoffMeta.ts`, `CommitMeta.ts`, `AgentLocation.ts`, `LocalLocation.ts`, `SSHLocation.ts`, `RuntimeAdapter.ts`, `RuntimeContext.ts`, `RunSpec.ts`, `RuntimeType.ts`); `index.ts` is the barrel
 - `packages/errors/` — `@quimbyhq/errors` — error taxonomy (QuimbyError, GitError, AgentError, HandoffError, ConflictError)
 - `packages/utils/` — `@quimbyhq/utils` — tiny generic helpers only: fs, yaml, logger
 - `packages/paths/` — `@quimbyhq/paths` — quimby on-disk + remote layout (getAgentDir, remote\*, tmuxSessionName, getTmuxConfigPath, `quimbyTmuxSocket`)
@@ -37,7 +38,7 @@ An npm-workspace monorepo. The domain is split into one package per capability s
 - `packages/git/` — `@quimbyhq/git` — typed wrapper over the git CLI
 - `packages/transport/` — `@quimbyhq/transport` — LocalTransport / SSHTransport abstraction (`sq`, getTransport, getSSHTransport)
 - `packages/runtimes/` — `@quimbyhq/runtimes` — execution adapters (local, sbx, openshell) + registry + buildContext
-- `packages/session/` — `@quimbyhq/session` — waking a live agent's tmux session (nudgeAgentSession, hasAgentSession); reused by the CLI nudge/assign/dispatch/handoff and the server's auto-dispatch
+- `packages/session/` — `@quimbyhq/session` — a live agent's tmux session: waking it (nudgeAgentSession, hasAgentSession) and reading its state (getAgentSessionState → running/attached/stopped); reused by the CLI nudge/assign/dispatch/handoff/start/stop/list and the server's auto-dispatch
 - `packages/workspace/` — `@quimbyhq/workspace` — `.quimby/` state lifecycle (resolve/ensure/load/save, migrations)
 - `packages/agent/` — `@quimbyhq/agent` — agent lifecycle (add, remove, rename, sync, rebuild, sync targets)
 - `packages/handoff/` — `@quimbyhq/handoff` — parcel lifecycle + apply, the boundary (assemble, deliver, apply, discard, readOutbox\*, markHandoffSent, dispatchOutbox — the shared outbox-enact core reused by the CLI `dispatch` and the server)
@@ -74,8 +75,10 @@ npm run exports:check   # describe-per-exported-function coverage (informational
 quimby add <agent> [-H <host>] [--port <n>] [-s <ref>]  # create an agent; with no config flags, runs the interactive walkthrough (flags skip it and stay scriptable)
 quimby config <agent>                               # interactively (re)configure an agent (runtime, entrypoint, local/remote, tmux, sync)
 quimby run <agent> [-c <cmd>] [-r <runtime>]       # launch the agent interactively (local tmux agents attach to a named session)
+quimby start <agent> [-c <cmd>] [-r <runtime>]     # launch the agent headless in a detached tmux session (idempotent; enrolls a local agent into tmux); drive with assign/nudge, attach with run, stop with stop
+quimby stop <agent>                                 # kill the agent's tmux session (headless or attached); work on disk is untouched
 quimby set <agent> [-r <rt>] [-c <cmd>] [-H <host>] [--port <n>] [-s <ref>]  # update agent config (-c sets the entrypoint command, -s retargets the sync ref)
-quimby list                                          # show agents and subscriptions
+quimby list                                          # show agents and subscriptions (with each agent's live session state: running / attached / stopped)
 quimby help [command]                                # root help (grouped + banner), or usage for one command
 quimby status [agent]                               # show agent-written status
 quimby assign <agent> -m "..." [--no-sync] [--no-nudge] [-c]  # set an agent's current task; syncs to base first (--no-sync to skip), writes assignment.md, wakes a running agent (--no-nudge to skip); -c/--clear types /clear before the nudge

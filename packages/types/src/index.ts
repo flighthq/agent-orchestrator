@@ -1,4 +1,5 @@
 export { type AgentLocation, isSSH } from './AgentLocation'
+export type { AgentSessionState } from './AgentSessionState'
 export type { AgentState } from './AgentState'
 export type { CommitMeta } from './CommitMeta'
 export type { HandoffMeta } from './HandoffMeta'

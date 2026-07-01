@@ -14,6 +14,8 @@ const main = defineCommand({
     add: () => import('./commands/add').then((m) => m.default),
     config: () => import('./commands/config').then((m) => m.default),
     run: () => import('./commands/run').then((m) => m.default),
+    start: () => import('./commands/start').then((m) => m.default),
+    stop: () => import('./commands/stop').then((m) => m.default),
     list: () => import('./commands/list').then((m) => m.default),
     status: () => import('./commands/status').then((m) => m.default),
     assign: () => import('./commands/assign').then((m) => m.default),
